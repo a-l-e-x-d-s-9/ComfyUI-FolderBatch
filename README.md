@@ -154,6 +154,8 @@ Inputs (required)
 - use_image / use_video / use_text / use_audio (BOOLEAN): Enable each media type.
 - image_folder / video_folder / text_folder / audio_folder (STRING): Optional per-media folders.
 - image_extension / video_extension / text_extension / audio_extension (STRING): Glob pattern(s) per media.
+- text_unit_mode (file|line): Use one text file per item, or one text line per item.
+- skip_empty_lines (BOOLEAN): Skip blank lines when `text_unit_mode` is `line`.
 
 Inputs (optional)
 - item_count (INT): UI display only.
@@ -164,6 +166,7 @@ Outputs
 - image_path (STRING): Selected image path or empty string.
 - video_path (STRING): Selected video path or empty string.
 - text_path (STRING): Selected text path or empty string.
+- line_index (INT): `-1` in file mode, otherwise the 0-based text line index.
 - audio_path (STRING): Selected audio path or empty string.
 - item_count (INT): Total synchronized item count.
 
@@ -191,7 +194,7 @@ Image batch:
 3) Connect image to your processing nodes
 
 Sync batch:
-1) FolderBatch Sync Queue -> base_name, image_path, video_path, text_path, audio_path
+1) FolderBatch Sync Queue -> base_name, image_path, video_path, text_path, line_index, audio_path
 2) Connect the paths you need into FolderBatch Load Image / Load Video Frames / Load Text / Load Audio
 3) Process each synchronized item set
 
@@ -348,6 +351,8 @@ ComfyUIでフォルダ内のファイルを1つずつキューに流し込むた
 - use_image / use_video / use_text / use_audio (BOOLEAN): 媒体ごとの使用有無
 - image_folder / video_folder / text_folder / audio_folder (STRING): 媒体ごとの個別フォルダ
 - image_extension / video_extension / text_extension / audio_extension (STRING): 媒体ごとの拡張子グロブ
+- text_unit_mode (file|line): テキストをファイル単位で使うか、行単位で使うか
+- skip_empty_lines (BOOLEAN): `text_unit_mode` が `line` のとき空行をスキップ
 
 入力（任意）
 - item_count (INT): UI表示用
@@ -358,6 +363,7 @@ ComfyUIでフォルダ内のファイルを1つずつキューに流し込むた
 - image_path (STRING): 対応画像のパス。なければ空文字
 - video_path (STRING): 対応動画のパス。なければ空文字
 - text_path (STRING): 対応テキストのパス。なければ空文字
+- line_index (INT): fileモードでは `-1`、lineモードでは0始まりの行番号
 - audio_path (STRING): 対応音声のパス。なければ空文字
 - item_count (INT): 同期対象の総数
 
@@ -385,6 +391,6 @@ ComfyUIでフォルダ内のファイルを1つずつキューに流し込むた
 3) 画像処理ノードに接続
 
 同期バッチ:
-1) FolderBatch Sync Queue -> base_name, image_path, video_path, text_path, audio_path
+1) FolderBatch Sync Queue -> base_name, image_path, video_path, text_path, line_index, audio_path
 2) 必要な path だけ FolderBatch Load Image / Load Video Frames / Load Text / Load Audio に接続
 3) 同期された1件ずつを処理

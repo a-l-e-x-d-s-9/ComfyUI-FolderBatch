@@ -177,7 +177,15 @@ def build_media_configs(
     return configs
 
 
-def build_sync_entries(configs, sync_mode="By Name", sort_by="Name", order_by="A-Z", missing_policy="Skip"):
+def build_sync_entries(
+    configs,
+    sync_mode="By Name",
+    sort_by="Name",
+    order_by="A-Z",
+    missing_policy="Skip",
+    text_unit_mode="file",
+    skip_empty_lines=True,
+):
     if not configs:
         return []
 
@@ -186,9 +194,35 @@ def build_sync_entries(configs, sync_mode="By Name", sort_by="Name", order_by="A
         media_files[config["key"]] = get_files(config["folder"], config["extension"], sort_by, order_by)
 
     if sync_mode == "By Name":
-        return build_sync_entries_by_name(media_files, missing_policy)
+        entries = build_sync_entries_by_name(media_files, missing_policy)
+    else:
+        entries = build_sync_entries_by_order(media_files, missing_policy)
 
-    return build_sync_entries_by_order(media_files, missing_policy)
+    return expand_sync_text_entries(entries, text_unit_mode, skip_empty_lines)
+
+
+def expand_sync_text_entries(entries, text_unit_mode="file", skip_empty_lines=True):
+    if text_unit_mode != "line":
+        for entry in entries:
+            entry["line_index"] = -1
+        return entries
+
+    expanded_entries = []
+    for entry in entries:
+        text_path = entry.get("text_path", "")
+        if text_path == "":
+            next_entry = dict(entry)
+            next_entry["line_index"] = -1
+            expanded_entries.append(next_entry)
+            continue
+
+        lines = get_text_lines(text_path, skip_empty_lines)
+        for line in lines:
+            next_entry = dict(entry)
+            next_entry["line_index"] = line["line_index"]
+            expanded_entries.append(next_entry)
+
+    return expanded_entries
 
 
 def build_sync_entries_by_name(media_files, missing_policy):
@@ -841,6 +875,8 @@ class FB_FolderSyncQueue:
                 "use_text": ("BOOLEAN", {"default": False}),
                 "text_folder": ("STRING", {"default": ""}),
                 "text_extension": ("STRING", {"default": "*.txt"}),
+                "text_unit_mode": (["file", "line"], {"default": "file"}),
+                "skip_empty_lines": ("BOOLEAN", {"default": True}),
                 "use_audio": ("BOOLEAN", {"default": False}),
                 "audio_folder": ("STRING", {"default": ""}),
                 "audio_extension": ("STRING", {"default": "*.mp3;*.wav;*.flac;*.m4a;*.ogg;*.aac"}),
@@ -851,8 +887,8 @@ class FB_FolderSyncQueue:
             },
         }
 
-    RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING", "STRING", "INT")
-    RETURN_NAMES = ("base_name", "image_path", "video_path", "text_path", "audio_path", "item_count")
+    RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING", "INT", "STRING", "INT")
+    RETURN_NAMES = ("base_name", "image_path", "video_path", "text_path", "line_index", "audio_path", "item_count")
     FUNCTION = "run"
     CATEGORY = "FolderBatch/Sync"
 
@@ -874,6 +910,8 @@ class FB_FolderSyncQueue:
         use_text=False,
         text_folder="",
         text_extension="*.txt",
+        text_unit_mode="file",
+        skip_empty_lines=True,
         use_audio=False,
         audio_folder="",
         audio_extension="*.mp3;*.wav;*.flac;*.m4a;*.ogg;*.aac",
@@ -896,12 +934,20 @@ class FB_FolderSyncQueue:
                 audio_folder=audio_folder,
                 audio_extension=audio_extension,
             )
-            self.entries = build_sync_entries(configs, sync_mode, sort_by, order_by, missing_policy)
+            self.entries = build_sync_entries(
+                configs,
+                sync_mode,
+                sort_by,
+                order_by,
+                missing_policy,
+                text_unit_mode,
+                skip_empty_lines,
+            )
             self.is_finished = False
 
         if len(self.entries) == 0:
             return {
-                "result": ("", "", "", "", "", 0),
+                "result": ("", "", "", "", -1, "", 0),
                 "ui": {
                     "item_count": (0,),
                     "start_at": (0,),
@@ -927,6 +973,7 @@ class FB_FolderSyncQueue:
                 entry.get("image_path", ""),
                 entry.get("video_path", ""),
                 entry.get("text_path", ""),
+                entry.get("line_index", -1),
                 entry.get("audio_path", ""),
                 total,
             ),
@@ -1030,6 +1077,8 @@ async def route_folderbatch_sync_get_sync_count(request):
             request.query.get("sort_by", "Name"),
             request.query.get("order_by", "A-Z"),
             request.query.get("missing_policy", "Skip"),
+            request.query.get("text_unit_mode", "file"),
+            request.query.get("skip_empty_lines", "true").lower() == "true",
         )
         item_count = len(entries)
     except Exception:

@@ -71,8 +71,10 @@ Load a text file and output its content.
 
 Inputs (required)
 - text_path (STRING): Full path to the text file.
-- line_index (INT): `-1` for full file, otherwise the 0-based line index to load.
 - skip_empty_lines (BOOLEAN): Match line-mode queue behavior when reading by line.
+
+Inputs (optional)
+- line_index (INT): `-1` or unconnected for full file, otherwise the 0-based line index to load.
 
 Outputs
 - text (STRING): File content.
@@ -263,8 +265,10 @@ ComfyUIでフォルダ内のファイルを1つずつキューに流し込むた
 
 入力（必須）
 - text_path (STRING): テキストファイルのフルパス
-- line_index (INT): `-1` なら全文、それ以外は対象の0始まり行番号
 - skip_empty_lines (BOOLEAN): 行単位時の空行スキップ設定に合わせるか
+
+入力（任意）
+- line_index (INT): 未接続または `-1` なら全文、それ以外は対象の0始まり行番号
 
 出力
 - text (STRING): ファイル内容

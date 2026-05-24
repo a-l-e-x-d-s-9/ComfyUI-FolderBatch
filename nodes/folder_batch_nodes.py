@@ -490,8 +490,10 @@ class FB_LoadTextFile:
         return {
             "required": {
                 "text_path": ("STRING", {"default": "", "forceInput": True}),
-                "line_index": ("INT", {"default": -1, "min": -1, "forceInput": True}),
                 "skip_empty_lines": ("BOOLEAN", {"default": True}),
+            },
+            "optional": {
+                "line_index": ("INT", {"default": -1, "min": -1, "forceInput": True}),
             },
         }
 

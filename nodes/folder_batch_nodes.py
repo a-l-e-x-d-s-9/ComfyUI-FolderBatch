@@ -23,7 +23,7 @@ def get_search_patterns(extension):
     return patterns or ["*"]
 
 
-def get_files(folder, extension, sort_by="Name", order_by="A-Z"):
+def get_files(folder, extension, sort_by="Name", order_by="A-Z", seed=0):
     if folder is None or str(folder).strip() == "":
         return []
 
@@ -39,7 +39,7 @@ def get_files(folder, extension, sort_by="Name", order_by="A-Z"):
     elif sort_by == "Date":
         file_list = sorted(file_list, key=lambda x: os.path.getmtime(x))
     elif sort_by == "Random":
-        random.shuffle(file_list)
+        random.Random(seed).shuffle(file_list)
 
     if order_by == "Z-A" and sort_by != "Random":
         file_list.reverse()
@@ -93,6 +93,7 @@ def build_text_queue_entries(
     sort_by="Name",
     order_by="A-Z",
     skip_empty_lines=True,
+    seed=0,
 ):
     if source_mode == "file":
         if text_path is None or str(text_path).strip() == "":
@@ -107,7 +108,7 @@ def build_text_queue_entries(
 
         return get_text_lines(resolved_path, skip_empty_lines)
 
-    files = get_files(folder, extension, sort_by, order_by)
+    files = get_files(folder, extension, sort_by, order_by, seed)
     if unit_mode == "file":
         return [
             {
@@ -185,16 +186,27 @@ def build_sync_entries(
     missing_policy="Skip",
     text_unit_mode="file",
     skip_empty_lines=True,
+    seed=0,
 ):
     if not configs:
         return []
 
     media_files = {}
     for config in configs:
-        media_files[config["key"]] = get_files(config["folder"], config["extension"], sort_by, order_by)
+        media_files[config["key"]] = get_files(
+            config["folder"],
+            config["extension"],
+            sort_by,
+            order_by,
+            seed,
+        )
 
     if sync_mode == "By Name":
         entries = build_sync_entries_by_name(media_files, missing_policy)
+        if sort_by == "Random":
+            random.Random(seed).shuffle(entries)
+        elif order_by == "Z-A":
+            entries.reverse()
     else:
         entries = build_sync_entries_by_order(media_files, missing_policy)
 
@@ -313,6 +325,7 @@ class FB_FolderVideoQueue:
                 "auto_queue": ("BOOLEAN", {"default": True}),
                 "sort_by": (["Name", "Date", "Random"], {"default": "Name"}),
                 "order_by": (["A-Z", "Z-A"], {"default": "A-Z"}),
+                "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
             },
             "optional": {
                 "video_count": ("INT", {"default": 0, "min": 0}),
@@ -333,6 +346,7 @@ class FB_FolderVideoQueue:
         auto_queue=True,
         sort_by="Name",
         order_by="A-Z",
+        seed=0,
         video_count=0,
         progress=0.0,
     ):
@@ -341,10 +355,11 @@ class FB_FolderVideoQueue:
             str(extension).strip(),
             sort_by,
             order_by,
+            seed,
         )
 
         if len(self.files) <= 0 or self.state_key != state_key:
-            self.files = get_files(folder, extension, sort_by, order_by)
+            self.files = get_files(folder, extension, sort_by, order_by, seed)
             self.state_key = state_key
             self.is_finished = False
 
@@ -434,6 +449,7 @@ class FB_FolderTextQueue:
                 "auto_queue": ("BOOLEAN", {"default": True}),
                 "sort_by": (["Name", "Date", "Random"], {"default": "Name"}),
                 "order_by": (["A-Z", "Z-A"], {"default": "A-Z"}),
+                "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
                 "skip_empty_lines": ("BOOLEAN", {"default": True}),
             },
             "optional": {
@@ -458,6 +474,7 @@ class FB_FolderTextQueue:
         auto_queue=True,
         sort_by="Name",
         order_by="A-Z",
+        seed=0,
         skip_empty_lines=True,
         text_count=0,
         progress=0.0,
@@ -473,6 +490,7 @@ class FB_FolderTextQueue:
             str(extension).strip(),
             sort_by,
             order_by,
+            seed,
             bool(skip_empty_lines),
         )
 
@@ -485,6 +503,7 @@ class FB_FolderTextQueue:
                 extension=extension,
                 sort_by=sort_by,
                 order_by=order_by,
+                seed=seed,
                 skip_empty_lines=skip_empty_lines,
             )
             self.state_key = state_key
@@ -611,6 +630,7 @@ class FB_FolderAudioQueue:
                 "auto_queue": ("BOOLEAN", {"default": True}),
                 "sort_by": (["Name", "Date", "Random"], {"default": "Name"}),
                 "order_by": (["A-Z", "Z-A"], {"default": "A-Z"}),
+                "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
             },
             "optional": {
                 "audio_count": ("INT", {"default": 0, "min": 0}),
@@ -631,6 +651,7 @@ class FB_FolderAudioQueue:
         auto_queue=True,
         sort_by="Name",
         order_by="A-Z",
+        seed=0,
         audio_count=0,
         progress=0.0,
     ):
@@ -639,10 +660,11 @@ class FB_FolderAudioQueue:
             str(extension).strip(),
             sort_by,
             order_by,
+            seed,
         )
 
         if len(self.files) <= 0 or self.state_key != state_key:
-            self.files = get_files(folder, extension, sort_by, order_by)
+            self.files = get_files(folder, extension, sort_by, order_by, seed)
             self.state_key = state_key
             self.is_finished = False
 
@@ -733,6 +755,7 @@ class FB_FolderImageQueue:
                 "auto_queue": ("BOOLEAN", {"default": True}),
                 "sort_by": (["Name", "Date", "Random"], {"default": "Name"}),
                 "order_by": (["A-Z", "Z-A"], {"default": "A-Z"}),
+                "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
             },
             "optional": {
                 "image_count": ("INT", {"default": 0, "min": 0}),
@@ -753,6 +776,7 @@ class FB_FolderImageQueue:
         auto_queue=True,
         sort_by="Name",
         order_by="A-Z",
+        seed=0,
         image_count=0,
         progress=0.0,
     ):
@@ -761,10 +785,11 @@ class FB_FolderImageQueue:
             str(extension).strip(),
             sort_by,
             order_by,
+            seed,
         )
 
         if len(self.files) <= 0 or self.state_key != state_key:
-            self.files = get_files(folder, extension, sort_by, order_by)
+            self.files = get_files(folder, extension, sort_by, order_by, seed)
             self.state_key = state_key
             self.is_finished = False
 
@@ -897,6 +922,7 @@ class FB_FolderSyncQueue:
                 "auto_queue": ("BOOLEAN", {"default": True}),
                 "sort_by": (["Name", "Date", "Random"], {"default": "Name"}),
                 "order_by": (["A-Z", "Z-A"], {"default": "A-Z"}),
+                "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
                 "use_image": ("BOOLEAN", {"default": False}),
                 "image_folder": ("STRING", {"default": ""}),
                 "image_extension": ("STRING", {"default": "*.png;*.jpg;*.jpeg;*.webp;*.bmp"}),
@@ -932,6 +958,7 @@ class FB_FolderSyncQueue:
         auto_queue=True,
         sort_by="Name",
         order_by="A-Z",
+        seed=0,
         use_image=False,
         image_folder="",
         image_extension="*.png;*.jpg;*.jpeg;*.webp;*.bmp",
@@ -955,6 +982,7 @@ class FB_FolderSyncQueue:
             missing_policy,
             sort_by,
             order_by,
+            seed,
             bool(use_image),
             str(image_folder).strip(),
             str(image_extension).strip(),
@@ -988,13 +1016,14 @@ class FB_FolderSyncQueue:
                 audio_extension=audio_extension,
             )
             self.entries = build_sync_entries(
-                configs,
-                sync_mode,
-                sort_by,
-                order_by,
-                missing_policy,
-                text_unit_mode,
-                skip_empty_lines,
+                configs=configs,
+                sync_mode=sync_mode,
+                sort_by=sort_by,
+                order_by=order_by,
+                missing_policy=missing_policy,
+                text_unit_mode=text_unit_mode,
+                skip_empty_lines=skip_empty_lines,
+                seed=seed,
             )
             self.state_key = state_key
             self.is_finished = False
@@ -1127,13 +1156,14 @@ async def route_folderbatch_sync_get_sync_count(request):
             audio_extension=request.query.get("audio_extension", "*.mp3;*.wav;*.flac;*.m4a;*.ogg;*.aac"),
         )
         entries = build_sync_entries(
-            configs,
-            request.query.get("sync_mode", "By Name"),
-            request.query.get("sort_by", "Name"),
-            request.query.get("order_by", "A-Z"),
-            request.query.get("missing_policy", "Skip"),
-            request.query.get("text_unit_mode", "file"),
-            request.query.get("skip_empty_lines", "true").lower() == "true",
+            configs=configs,
+            sync_mode=request.query.get("sync_mode", "By Name"),
+            sort_by=request.query.get("sort_by", "Name"),
+            order_by=request.query.get("order_by", "A-Z"),
+            missing_policy=request.query.get("missing_policy", "Skip"),
+            text_unit_mode=request.query.get("text_unit_mode", "file"),
+            skip_empty_lines=request.query.get("skip_empty_lines", "true").lower() == "true",
+            seed=int(request.query.get("seed", "0")),
         )
         item_count = len(entries)
     except Exception:

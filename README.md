@@ -21,6 +21,7 @@ Inputs (required)
 - auto_queue (BOOLEAN): If enabled, triggers next queue automatically.
 - sort_by (Name|Date|Random): Sorting method.
 - order_by (A-Z|Z-A): Sort order.
+- seed (INT): Reproduces the exact file order when `sort_by=Random`.
 
 Inputs (optional)
 - video_count (INT): UI display only.
@@ -54,6 +55,7 @@ Inputs (required)
 - auto_queue (BOOLEAN): If enabled, triggers next queue automatically.
 - sort_by (Name|Date|Random): Sorting method.
 - order_by (A-Z|Z-A): Sort order.
+- seed (INT): Reproduces the exact file order when `sort_by=Random`.
 - skip_empty_lines (BOOLEAN): Skip blank lines in line mode.
 
 Inputs (optional)
@@ -89,6 +91,7 @@ Inputs (required)
 - auto_queue (BOOLEAN): If enabled, triggers next queue automatically.
 - sort_by (Name|Date|Random): Sorting method.
 - order_by (A-Z|Z-A): Sort order.
+- seed (INT): Reproduces the exact file order when `sort_by=Random`.
 
 Inputs (optional)
 - audio_count (INT): UI display only.
@@ -120,6 +123,7 @@ Inputs (required)
 - auto_queue (BOOLEAN): If enabled, triggers next queue automatically.
 - sort_by (Name|Date|Random): Sorting method.
 - order_by (A-Z|Z-A): Sort order.
+- seed (INT): Reproduces the exact file order when `sort_by=Random`.
 
 Inputs (optional)
 - image_count (INT): UI display only.
@@ -151,6 +155,7 @@ Inputs (required)
 - auto_queue (BOOLEAN): If enabled, triggers next queue automatically.
 - sort_by (Name|Date|Random): Sorting method.
 - order_by (A-Z|Z-A): Sort order.
+- seed (INT): Reproduces the exact item order when `sort_by=Random`.
 - use_image / use_video / use_text / use_audio (BOOLEAN): Enable each media type.
 - image_folder / video_folder / text_folder / audio_folder (STRING): Optional per-media folders.
 - image_extension / video_extension / text_extension / audio_extension (STRING): Glob pattern(s) per media.
@@ -218,6 +223,7 @@ ComfyUIでフォルダ内のファイルを1つずつキューに流し込むた
 - auto_queue (BOOLEAN): 有効なら自動で次をキュー
 - sort_by (Name|Date|Random): 並び順の基準
 - order_by (A-Z|Z-A): 並び順の向き
+- seed (INT): `sort_by=Random` のとき同じファイル順を再現するシード値
 
 入力（任意）
 - video_count (INT): UI表示用
@@ -251,6 +257,7 @@ ComfyUIでフォルダ内のファイルを1つずつキューに流し込むた
 - auto_queue (BOOLEAN): 有効なら自動で次をキュー
 - sort_by (Name|Date|Random): 並び順の基準
 - order_by (A-Z|Z-A): 並び順の向き
+- seed (INT): `sort_by=Random` のとき同じファイル順を再現するシード値
 - skip_empty_lines (BOOLEAN): 行単位時に空行を飛ばすか
 
 入力（任意）
@@ -286,6 +293,7 @@ ComfyUIでフォルダ内のファイルを1つずつキューに流し込むた
 - auto_queue (BOOLEAN): 有効なら自動で次をキュー
 - sort_by (Name|Date|Random): 並び順の基準
 - order_by (A-Z|Z-A): 並び順の向き
+- seed (INT): `sort_by=Random` のとき同じファイル順を再現するシード値
 
 入力（任意）
 - audio_count (INT): UI表示用
@@ -317,6 +325,7 @@ ComfyUIでフォルダ内のファイルを1つずつキューに流し込むた
 - auto_queue (BOOLEAN): 有効なら自動で次をキュー
 - sort_by (Name|Date|Random): 並び順の基準
 - order_by (A-Z|Z-A): 並び順の向き
+- seed (INT): `sort_by=Random` のとき同じファイル順を再現するシード値
 
 入力（任意）
 - image_count (INT): UI表示用
@@ -348,6 +357,7 @@ ComfyUIでフォルダ内のファイルを1つずつキューに流し込むた
 - auto_queue (BOOLEAN): 有効なら自動で次をキュー
 - sort_by (Name|Date|Random): 並び順の基準
 - order_by (A-Z|Z-A): 並び順の向き
+- seed (INT): `sort_by=Random` のとき同じ項目順を再現するシード値
 - use_image / use_video / use_text / use_audio (BOOLEAN): 媒体ごとの使用有無
 - image_folder / video_folder / text_folder / audio_folder (STRING): 媒体ごとの個別フォルダ
 - image_extension / video_extension / text_extension / audio_extension (STRING): 媒体ごとの拡張子グロブ

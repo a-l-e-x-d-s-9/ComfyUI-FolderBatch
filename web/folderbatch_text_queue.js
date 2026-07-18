@@ -1,7 +1,6 @@
 import { app } from "/scripts/app.js";
-import { findWidgetByName, LatestJsonRequest, releaseQueuePromptOwner, scheduleQueuePrompt } from "./modules/utils.js";
+import { findWidgetByName, releaseQueuePromptOwner, scheduleQueuePrompt } from "./modules/utils.js";
 
-const API_BASE_URL = "/folderbatch/text-queue/";
 const HIDDEN_TAG = "folderbatch_hidden";
 const CONTROLLER = Symbol("folderbatchTextQueueController");
 
@@ -33,12 +32,8 @@ class FolderBatchTextQueue {
     textPathWidget;
     extensionWidget;
     startAtWidget;
-    textCountWidget;
     autoQueueWidget;
-    progressWidget;
     skipEmptyLinesWidget;
-    textCount = 0;
-    countRequest = new LatestJsonRequest();
 
     normalizeModes() {
         if (this.sourceModeWidget.value === "file" && this.unitModeWidget.value !== "line") {
@@ -68,103 +63,43 @@ class FolderBatchTextQueue {
         }
     }
 
-    async getTextCount() {
-        this.normalizeModes();
-        const sourceMode = encodeURIComponent(this.sourceModeWidget.value ?? "folder");
-        const unitMode = encodeURIComponent(this.unitModeWidget.value ?? "file");
-        const folder = encodeURIComponent(this.folderWidget.value ?? "");
-        const textPath = encodeURIComponent(this.textPathWidget.value ?? "");
-        const extension = encodeURIComponent(this.extensionWidget.value ?? "");
-        const skipEmptyLines = encodeURIComponent(this.skipEmptyLinesWidget.value ?? true);
-        const url = API_BASE_URL
-            + `get_text_count?source_mode=${sourceMode}&unit_mode=${unitMode}&folder=${folder}`
-            + `&text_path=${textPath}&extension=${extension}&skip_empty_lines=${skipEmptyLines}`;
-        const data = await this.countRequest.get(url);
-
-        if (data !== null) {
-            const count = Number.parseInt(data["text_count"], 10);
-            this.textCount = Number.isFinite(count) ? count : 0;
-        }
-        return this.textCount;
-    }
-
-    refreshTextCount() {
-        if (this.textCountWidget) {
-            this.textCountWidget.value = this.textCount;
-        }
-    }
-
-    refreshProgress(startAt) {
-        if (this.progressWidget && this.textCount > 0) {
-            this.progressWidget.value = (startAt + 1) / this.textCount;
-        }
-    }
-
-    async onExecuted(textCount, startAt) {
-        if (startAt + 1 < textCount) {
+    async onExecuted(queueCount, startAt) {
+        if (startAt + 1 < queueCount) {
             this.startAtWidget.value = startAt + 1;
-            this.refreshProgress(startAt);
 
             if (this.autoQueueWidget.value) {
                 await scheduleQueuePrompt(app, this, () => this.autoQueueWidget.value);
             } else {
                 releaseQueuePromptOwner(this);
             }
-        } else if (startAt + 1 >= textCount) {
+        } else if (startAt + 1 >= queueCount) {
             releaseQueuePromptOwner(this);
             this.startAtWidget.value = 0;
-            if (this.progressWidget) {
-                this.progressWidget.value = 0;
-            }
         }
     }
 
-    initWidget(node, sourceModeWidget, unitModeWidget, folderWidget, textPathWidget, extensionWidget, startAtWidget, textCountWidget, autoQueueWidget, progressWidget, skipEmptyLinesWidget) {
+    initWidget(node, sourceModeWidget, unitModeWidget, folderWidget, textPathWidget, extensionWidget, startAtWidget, autoQueueWidget, skipEmptyLinesWidget) {
         this.sourceModeWidget = sourceModeWidget;
         this.unitModeWidget = unitModeWidget;
         this.folderWidget = folderWidget;
         this.textPathWidget = textPathWidget;
         this.extensionWidget = extensionWidget;
         this.startAtWidget = startAtWidget;
-        this.textCountWidget = textCountWidget;
         this.autoQueueWidget = autoQueueWidget;
-        this.progressWidget = progressWidget;
         this.skipEmptyLinesWidget = skipEmptyLinesWidget;
 
-        sourceModeWidget.callback = async () => {
+        sourceModeWidget.callback = () => {
             this.normalizeModes();
             this.refreshWidgetVisibility(node);
-            await this.getTextCount();
-            this.refreshTextCount();
         };
-        unitModeWidget.callback = async () => {
+        unitModeWidget.callback = () => {
             this.normalizeModes();
             this.refreshWidgetVisibility(node);
-            await this.getTextCount();
-            this.refreshTextCount();
-        };
-        folderWidget.callback = async () => {
-            await this.getTextCount();
-            this.refreshTextCount();
-        };
-        textPathWidget.callback = async () => {
-            await this.getTextCount();
-            this.refreshTextCount();
-        };
-        extensionWidget.callback = async () => {
-            await this.getTextCount();
-            this.refreshTextCount();
-        };
-        skipEmptyLinesWidget.callback = async () => {
-            await this.getTextCount();
-            this.refreshTextCount();
         };
 
-        setTimeout(async () => {
+        setTimeout(() => {
             this.normalizeModes();
             this.refreshWidgetVisibility(node);
-            await this.getTextCount();
-            this.refreshTextCount();
         }, 100);
     }
 }
@@ -188,8 +123,6 @@ app.registerExtension({
             const extensionWidget = findWidgetByName(this, "extension");
             const startAtWidget = findWidgetByName(this, "start_at");
             const autoQueueWidget = findWidgetByName(this, "auto_queue");
-            const textCountWidget = findWidgetByName(this, "text_count");
-            const progressWidget = findWidgetByName(this, "progress");
             const skipEmptyLinesWidget = findWidgetByName(this, "skip_empty_lines");
 
             folderTextQueue.initWidget(
@@ -200,9 +133,7 @@ app.registerExtension({
                 textPathWidget,
                 extensionWidget,
                 startAtWidget,
-                textCountWidget,
                 autoQueueWidget,
-                progressWidget,
                 skipEmptyLinesWidget
             );
 
@@ -213,16 +144,15 @@ app.registerExtension({
         nodeType.prototype.onExecuted = async function (message) {
             onExecuted?.apply(this, arguments);
 
-            const textCount = message["text_count"][0];
+            const queueCount = message["queue_count"][0];
             const startAt = message["start_at"][0];
-            this[CONTROLLER]?.onExecuted(textCount, startAt);
+            this[CONTROLLER]?.onExecuted(queueCount, startAt);
         };
 
         const onRemoved = nodeType.prototype.onRemoved;
         nodeType.prototype.onRemoved = function () {
             const controller = this[CONTROLLER];
             releaseQueuePromptOwner(controller);
-            controller?.countRequest.cancel();
             return onRemoved?.apply(this, arguments);
         };
     },

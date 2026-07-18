@@ -55,6 +55,13 @@ def get_base_name(path):
     return os.path.splitext(os.path.basename(path))[0]
 
 
+def apply_queue_limit(items, limit=0):
+    effective_limit = max(0, int(limit or 0))
+    if effective_limit == 0:
+        return items
+    return items[:effective_limit]
+
+
 def load_text_content(text_path):
     with open(text_path, "r", encoding="utf-8-sig", errors="replace") as f:
         text = f.read()
@@ -342,6 +349,7 @@ class FB_FolderVideoQueue:
         self.is_finished = False
         self.files = []
         self.state_key = None
+        self.available_count = 0
 
     @classmethod
     def INPUT_TYPES(cls):
@@ -354,15 +362,12 @@ class FB_FolderVideoQueue:
                 "sort_by": (["Name", "Date", "Random"], {"default": "Name"}),
                 "order_by": (["A-Z", "Z-A"], {"default": "A-Z"}),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
-            },
-            "optional": {
-                "video_count": ("INT", {"default": 0, "min": 0}),
-                "progress": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001}),
+                "video_limit": ("INT", {"default": 0, "min": 0}),
             },
         }
 
-    RETURN_TYPES = ("STRING", "STRING", "INT")
-    RETURN_NAMES = ("video_path", "file_name", "video_count")
+    RETURN_TYPES = ("STRING", "STRING", "INT", "FLOAT")
+    RETURN_NAMES = ("video_path", "file_name", "video_count", "progress")
     FUNCTION = "run"
     CATEGORY = "FolderBatch/Video"
 
@@ -375,29 +380,34 @@ class FB_FolderVideoQueue:
         sort_by="Name",
         order_by="A-Z",
         seed=0,
+        video_limit=0,
         video_count=0,
         progress=0.0,
     ):
+        video_limit = max(0, int(video_limit))
         state_key = (
             str(folder).strip(),
             str(extension).strip(),
             sort_by,
             order_by,
             seed,
+            video_limit,
         )
 
         if len(self.files) <= 0 or self.state_key != state_key:
-            self.files = get_files(folder, extension, sort_by, order_by, seed)
+            files = get_files(folder, extension, sort_by, order_by, seed)
+            self.available_count = len(files)
+            self.files = apply_queue_limit(files, video_limit)
             self.state_key = state_key
             self.is_finished = False
 
         if len(self.files) == 0:
             return {
-                "result": ("", "", 0),
+                "result": ("", "", 0, 0.0),
                 "ui": {
                     "video_count": (0,),
+                    "queue_count": (0,),
                     "start_at": (0,),
-                    "progress": (0.0,),
                 },
             }
 
@@ -416,11 +426,11 @@ class FB_FolderVideoQueue:
             progress_val = (start_at + 1) / total
 
         return {
-            "result": (video_path, file_name, total),
+            "result": (video_path, file_name, self.available_count, progress_val),
             "ui": {
-                "video_count": (total,),
+                "video_count": (self.available_count,),
+                "queue_count": (total,),
                 "start_at": (start_at,),
-                "progress": (progress_val,),
             },
         }
 
@@ -463,6 +473,7 @@ class FB_FolderTextQueue:
         self.is_finished = False
         self.entries = []
         self.state_key = None
+        self.available_count = 0
 
     @classmethod
     def INPUT_TYPES(cls):
@@ -478,16 +489,13 @@ class FB_FolderTextQueue:
                 "sort_by": (["Name", "Date", "Random"], {"default": "Name"}),
                 "order_by": (["A-Z", "Z-A"], {"default": "A-Z"}),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
+                "text_limit": ("INT", {"default": 0, "min": 0}),
                 "skip_empty_lines": ("BOOLEAN", {"default": True}),
-            },
-            "optional": {
-                "text_count": ("INT", {"default": 0, "min": 0}),
-                "progress": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001}),
             },
         }
 
-    RETURN_TYPES = ("STRING", "STRING", "INT", "INT")
-    RETURN_NAMES = ("text_path", "file_name", "text_count", "line_index")
+    RETURN_TYPES = ("STRING", "STRING", "INT", "INT", "FLOAT")
+    RETURN_NAMES = ("text_path", "file_name", "text_count", "line_index", "progress")
     FUNCTION = "run"
     CATEGORY = "FolderBatch/Text"
 
@@ -503,6 +511,7 @@ class FB_FolderTextQueue:
         sort_by="Name",
         order_by="A-Z",
         seed=0,
+        text_limit=0,
         skip_empty_lines=True,
         text_count=0,
         progress=0.0,
@@ -510,6 +519,7 @@ class FB_FolderTextQueue:
         if source_mode == "file" and unit_mode != "line":
             raise ValueError("source_mode='file' requires unit_mode='line'.")
 
+        text_limit = max(0, int(text_limit))
         state_key = (
             source_mode,
             unit_mode,
@@ -519,11 +529,12 @@ class FB_FolderTextQueue:
             sort_by,
             order_by,
             seed,
+            text_limit,
             bool(skip_empty_lines),
         )
 
         if len(self.entries) <= 0 or self.state_key != state_key:
-            self.entries = build_text_queue_entries(
+            entries = build_text_queue_entries(
                 source_mode=source_mode,
                 unit_mode=unit_mode,
                 folder=folder,
@@ -534,16 +545,18 @@ class FB_FolderTextQueue:
                 seed=seed,
                 skip_empty_lines=skip_empty_lines,
             )
+            self.available_count = len(entries)
+            self.entries = apply_queue_limit(entries, text_limit)
             self.state_key = state_key
             self.is_finished = False
 
         if len(self.entries) == 0:
             return {
-                "result": ("", "", 0, -1),
+                "result": ("", "", 0, -1, 0.0),
                 "ui": {
                     "text_count": (0,),
+                    "queue_count": (0,),
                     "start_at": (0,),
-                    "progress": (0.0,),
                 },
             }
 
@@ -562,11 +575,11 @@ class FB_FolderTextQueue:
             progress_val = (start_at + 1) / total
 
         return {
-            "result": (entry["text_path"], file_name, total, entry["line_index"]),
+            "result": (entry["text_path"], file_name, self.available_count, entry["line_index"], progress_val),
             "ui": {
-                "text_count": (total,),
+                "text_count": (self.available_count,),
+                "queue_count": (total,),
                 "start_at": (start_at,),
-                "progress": (progress_val,),
             },
         }
 
@@ -647,6 +660,7 @@ class FB_FolderAudioQueue:
         self.is_finished = False
         self.files = []
         self.state_key = None
+        self.available_count = 0
 
     @classmethod
     def INPUT_TYPES(cls):
@@ -659,15 +673,12 @@ class FB_FolderAudioQueue:
                 "sort_by": (["Name", "Date", "Random"], {"default": "Name"}),
                 "order_by": (["A-Z", "Z-A"], {"default": "A-Z"}),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
-            },
-            "optional": {
-                "audio_count": ("INT", {"default": 0, "min": 0}),
-                "progress": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001}),
+                "audio_limit": ("INT", {"default": 0, "min": 0}),
             },
         }
 
-    RETURN_TYPES = ("STRING", "STRING", "INT")
-    RETURN_NAMES = ("audio_path", "file_name", "audio_count")
+    RETURN_TYPES = ("STRING", "STRING", "INT", "FLOAT")
+    RETURN_NAMES = ("audio_path", "file_name", "audio_count", "progress")
     FUNCTION = "run"
     CATEGORY = "FolderBatch/Audio"
 
@@ -680,29 +691,34 @@ class FB_FolderAudioQueue:
         sort_by="Name",
         order_by="A-Z",
         seed=0,
+        audio_limit=0,
         audio_count=0,
         progress=0.0,
     ):
+        audio_limit = max(0, int(audio_limit))
         state_key = (
             str(folder).strip(),
             str(extension).strip(),
             sort_by,
             order_by,
             seed,
+            audio_limit,
         )
 
         if len(self.files) <= 0 or self.state_key != state_key:
-            self.files = get_files(folder, extension, sort_by, order_by, seed)
+            files = get_files(folder, extension, sort_by, order_by, seed)
+            self.available_count = len(files)
+            self.files = apply_queue_limit(files, audio_limit)
             self.state_key = state_key
             self.is_finished = False
 
         if len(self.files) == 0:
             return {
-                "result": ("", "", 0),
+                "result": ("", "", 0, 0.0),
                 "ui": {
                     "audio_count": (0,),
+                    "queue_count": (0,),
                     "start_at": (0,),
-                    "progress": (0.0,),
                 },
             }
 
@@ -721,11 +737,11 @@ class FB_FolderAudioQueue:
             progress_val = (start_at + 1) / total
 
         return {
-            "result": (audio_path, file_name, total),
+            "result": (audio_path, file_name, self.available_count, progress_val),
             "ui": {
-                "audio_count": (total,),
+                "audio_count": (self.available_count,),
+                "queue_count": (total,),
                 "start_at": (start_at,),
-                "progress": (progress_val,),
             },
         }
 
@@ -772,6 +788,7 @@ class FB_FolderImageQueue:
         self.is_finished = False
         self.files = []
         self.state_key = None
+        self.available_count = 0
 
     @classmethod
     def INPUT_TYPES(cls):
@@ -784,15 +801,12 @@ class FB_FolderImageQueue:
                 "sort_by": (["Name", "Date", "Random"], {"default": "Name"}),
                 "order_by": (["A-Z", "Z-A"], {"default": "A-Z"}),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
-            },
-            "optional": {
-                "image_count": ("INT", {"default": 0, "min": 0}),
-                "progress": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001}),
+                "image_limit": ("INT", {"default": 0, "min": 0}),
             },
         }
 
-    RETURN_TYPES = ("STRING", "STRING", "INT")
-    RETURN_NAMES = ("image_path", "file_name", "image_count")
+    RETURN_TYPES = ("STRING", "STRING", "INT", "FLOAT")
+    RETURN_NAMES = ("image_path", "file_name", "image_count", "progress")
     FUNCTION = "run"
     CATEGORY = "FolderBatch/Image"
 
@@ -805,29 +819,34 @@ class FB_FolderImageQueue:
         sort_by="Name",
         order_by="A-Z",
         seed=0,
+        image_limit=0,
         image_count=0,
         progress=0.0,
     ):
+        image_limit = max(0, int(image_limit))
         state_key = (
             str(folder).strip(),
             str(extension).strip(),
             sort_by,
             order_by,
             seed,
+            image_limit,
         )
 
         if len(self.files) <= 0 or self.state_key != state_key:
-            self.files = get_files(folder, extension, sort_by, order_by, seed)
+            files = get_files(folder, extension, sort_by, order_by, seed)
+            self.available_count = len(files)
+            self.files = apply_queue_limit(files, image_limit)
             self.state_key = state_key
             self.is_finished = False
 
         if len(self.files) == 0:
             return {
-                "result": ("", "", 0),
+                "result": ("", "", 0, 0.0),
                 "ui": {
                     "image_count": (0,),
+                    "queue_count": (0,),
                     "start_at": (0,),
-                    "progress": (0.0,),
                 },
             }
 
@@ -846,11 +865,11 @@ class FB_FolderImageQueue:
             progress_val = (start_at + 1) / total
 
         return {
-            "result": (image_path, file_name, total),
+            "result": (image_path, file_name, self.available_count, progress_val),
             "ui": {
-                "image_count": (total,),
+                "image_count": (self.available_count,),
+                "queue_count": (total,),
                 "start_at": (start_at,),
-                "progress": (progress_val,),
             },
         }
 
@@ -938,6 +957,7 @@ class FB_FolderSyncQueue:
         self.is_finished = False
         self.entries = []
         self.state_key = None
+        self.available_count = 0
 
     @classmethod
     def INPUT_TYPES(cls):
@@ -951,6 +971,7 @@ class FB_FolderSyncQueue:
                 "sort_by": (["Name", "Date", "Random"], {"default": "Name"}),
                 "order_by": (["A-Z", "Z-A"], {"default": "A-Z"}),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
+                "item_limit": ("INT", {"default": 0, "min": 0}),
                 "use_image": ("BOOLEAN", {"default": False}),
                 "image_folder": ("STRING", {"default": ""}),
                 "image_extension": ("STRING", {"default": "*.png;*.jpg;*.jpeg;*.webp;*.bmp"}),
@@ -966,14 +987,10 @@ class FB_FolderSyncQueue:
                 "audio_folder": ("STRING", {"default": ""}),
                 "audio_extension": ("STRING", {"default": "*.mp3;*.wav;*.flac;*.m4a;*.ogg;*.aac"}),
             },
-            "optional": {
-                "item_count": ("INT", {"default": 0, "min": 0}),
-                "progress": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001}),
-            },
         }
 
-    RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING", "INT", "STRING", "INT")
-    RETURN_NAMES = ("base_name", "image_path", "video_path", "text_path", "line_index", "audio_path", "item_count")
+    RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING", "INT", "STRING", "INT", "FLOAT")
+    RETURN_NAMES = ("base_name", "image_path", "video_path", "text_path", "line_index", "audio_path", "item_count", "progress")
     FUNCTION = "run"
     CATEGORY = "FolderBatch/Sync"
 
@@ -987,6 +1004,7 @@ class FB_FolderSyncQueue:
         sort_by="Name",
         order_by="A-Z",
         seed=0,
+        item_limit=0,
         use_image=False,
         image_folder="",
         image_extension="*.png;*.jpg;*.jpeg;*.webp;*.bmp",
@@ -1004,6 +1022,7 @@ class FB_FolderSyncQueue:
         item_count=0,
         progress=0.0,
     ):
+        item_limit = max(0, int(item_limit))
         state_key = (
             str(common_folder).strip(),
             sync_mode,
@@ -1011,6 +1030,7 @@ class FB_FolderSyncQueue:
             sort_by,
             order_by,
             seed,
+            item_limit,
             bool(use_image),
             str(image_folder).strip(),
             str(image_extension).strip(),
@@ -1043,7 +1063,7 @@ class FB_FolderSyncQueue:
                 audio_folder=audio_folder,
                 audio_extension=audio_extension,
             )
-            self.entries = build_sync_entries(
+            entries = build_sync_entries(
                 configs=configs,
                 sync_mode=sync_mode,
                 sort_by=sort_by,
@@ -1053,16 +1073,18 @@ class FB_FolderSyncQueue:
                 skip_empty_lines=skip_empty_lines,
                 seed=seed,
             )
+            self.available_count = len(entries)
+            self.entries = apply_queue_limit(entries, item_limit)
             self.state_key = state_key
             self.is_finished = False
 
         if len(self.entries) == 0:
             return {
-                "result": ("", "", "", "", -1, "", 0),
+                "result": ("", "", "", "", -1, "", 0, 0.0),
                 "ui": {
                     "item_count": (0,),
+                    "queue_count": (0,),
                     "start_at": (0,),
-                    "progress": (0.0,),
                 },
             }
 
@@ -1087,12 +1109,13 @@ class FB_FolderSyncQueue:
                 entry.get("text_path", ""),
                 entry.get("line_index", -1),
                 entry.get("audio_path", ""),
-                total,
+                self.available_count,
+                progress_val,
             ),
             "ui": {
-                "item_count": (total,),
+                "item_count": (self.available_count,),
+                "queue_count": (total,),
                 "start_at": (start_at,),
-                "progress": (progress_val,),
             },
         }
 

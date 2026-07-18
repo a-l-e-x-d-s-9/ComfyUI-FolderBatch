@@ -1,84 +1,30 @@
 import { app } from "/scripts/app.js";
-import { findWidgetByName, LatestJsonRequest, releaseQueuePromptOwner, scheduleQueuePrompt } from "./modules/utils.js";
+import { findWidgetByName, releaseQueuePromptOwner, scheduleQueuePrompt } from "./modules/utils.js";
 
-const API_BASE_URL = "/folderbatch/video-queue/";
 const CONTROLLER = Symbol("folderbatchVideoQueueController");
 
 class FolderBatchVideoQueue {
-    folderWidget;
-    extensionWidget;
     startAtWidget;
-    videoCountWidget;
     autoQueueWidget;
-    progressWidget;
-    videoCount = 0;
-    countRequest = new LatestJsonRequest();
 
-    async getVideoCount() {
-        const folder = encodeURIComponent(this.folderWidget.value ?? "");
-        const extension = encodeURIComponent(this.extensionWidget.value ?? "");
-        const url = API_BASE_URL + `get_video_count?folder=${folder}&extension=${extension}`;
-        const data = await this.countRequest.get(url);
-
-        if (data !== null) {
-            const count = Number.parseInt(data["video_count"], 10);
-            this.videoCount = Number.isFinite(count) ? count : 0;
-        }
-        return this.videoCount;
-    }
-
-    refreshVideoCount() {
-        if (this.videoCountWidget) {
-            this.videoCountWidget.value = this.videoCount;
-        }
-    }
-
-    refreshProgress(startAt) {
-        if (this.progressWidget && this.videoCount > 0) {
-            this.progressWidget.value = (startAt + 1) / this.videoCount;
-        }
-    }
-
-    async onExecuted(videoCount, startAt) {
-        if (startAt + 1 < videoCount) {
+    async onExecuted(queueCount, startAt) {
+        if (startAt + 1 < queueCount) {
             this.startAtWidget.value = startAt + 1;
-            this.refreshProgress(startAt);
 
             if (this.autoQueueWidget.value) {
                 await scheduleQueuePrompt(app, this, () => this.autoQueueWidget.value);
             } else {
                 releaseQueuePromptOwner(this);
             }
-        } else if (startAt + 1 >= videoCount) {
+        } else if (startAt + 1 >= queueCount) {
             releaseQueuePromptOwner(this);
             this.startAtWidget.value = 0;
-            if (this.progressWidget) {
-                this.progressWidget.value = 0;
-            }
         }
     }
 
-    initWidget(folderWidget, extensionWidget, startAtWidget, videoCountWidget, autoQueueWidget, progressWidget) {
-        this.folderWidget = folderWidget;
-        this.extensionWidget = extensionWidget;
+    initWidget(startAtWidget, autoQueueWidget) {
         this.startAtWidget = startAtWidget;
-        this.videoCountWidget = videoCountWidget;
         this.autoQueueWidget = autoQueueWidget;
-        this.progressWidget = progressWidget;
-
-        folderWidget.callback = async () => {
-            await this.getVideoCount();
-            this.refreshVideoCount();
-        };
-        extensionWidget.callback = async () => {
-            await this.getVideoCount();
-            this.refreshVideoCount();
-        };
-
-        setTimeout(async () => {
-            await this.getVideoCount();
-            this.refreshVideoCount();
-        }, 100);
     }
 }
 
@@ -94,20 +40,12 @@ app.registerExtension({
             const folderVideoQueue = new FolderBatchVideoQueue();
             this[CONTROLLER] = folderVideoQueue;
 
-            const folderWidget = findWidgetByName(this, "folder");
-            const extensionWidget = findWidgetByName(this, "extension");
             const startAtWidget = findWidgetByName(this, "start_at");
             const autoQueueWidget = findWidgetByName(this, "auto_queue");
-            const videoCountWidget = findWidgetByName(this, "video_count");
-            const progressWidget = findWidgetByName(this, "progress");
 
             folderVideoQueue.initWidget(
-                folderWidget,
-                extensionWidget,
                 startAtWidget,
-                videoCountWidget,
-                autoQueueWidget,
-                progressWidget
+                autoQueueWidget
             );
 
             return r;
@@ -117,16 +55,15 @@ app.registerExtension({
         nodeType.prototype.onExecuted = async function (message) {
             onExecuted?.apply(this, arguments);
 
-            const videoCount = message["video_count"][0];
+            const queueCount = message["queue_count"][0];
             const startAt = message["start_at"][0];
-            this[CONTROLLER]?.onExecuted(videoCount, startAt);
+            this[CONTROLLER]?.onExecuted(queueCount, startAt);
         };
 
         const onRemoved = nodeType.prototype.onRemoved;
         nodeType.prototype.onRemoved = function () {
             const controller = this[CONTROLLER];
             releaseQueuePromptOwner(controller);
-            controller?.countRequest.cancel();
             return onRemoved?.apply(this, arguments);
         };
     },

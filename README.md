@@ -22,15 +22,13 @@ Inputs (required)
 - sort_by (Name|Date|Random): Sorting method.
 - order_by (A-Z|Z-A): Sort direction; Z-A reverses the result, including Random order.
 - seed (INT): Reproduces the exact file order when `sort_by=Random`.
-
-Inputs (optional)
-- video_count (INT): UI display only.
-- progress (FLOAT): UI display only (0.0 - 1.0).
+- video_limit (INT): Maximum files to queue; `0` uses every matching file.
 
 Outputs
 - video_path (STRING): Full path of the selected video.
 - file_name (STRING): Selected video base name without extension.
-- video_count (INT): Total count of matching files.
+- video_count (INT): Total matching files detected before applying `video_limit`.
+- progress (FLOAT): Completion ratio from 0.0 to 1.0.
 
 ### FolderBatch Load Video Frames
 Load a video and output frames as IMAGE batch, and also output the original video object.
@@ -56,17 +54,15 @@ Inputs (required)
 - sort_by (Name|Date|Random): Sorting method.
 - order_by (A-Z|Z-A): Sort direction; Z-A reverses the result, including Random order.
 - seed (INT): Reproduces the exact file order when `sort_by=Random`.
+- text_limit (INT): Maximum queued files or lines; `0` uses every matching item.
 - skip_empty_lines (BOOLEAN): Skip blank lines in line mode.
-
-Inputs (optional)
-- text_count (INT): UI display only.
-- progress (FLOAT): UI display only (0.0 - 1.0).
 
 Outputs
 - text_path (STRING): Full path of the selected text file.
 - file_name (STRING): Selected text base name without extension.
-- text_count (INT): Total count of queued items.
+- text_count (INT): Total matching files or lines detected before applying `text_limit`.
 - line_index (INT): Original 0-based line index, or `-1` in file mode.
+- progress (FLOAT): Completion ratio from 0.0 to 1.0.
 
 ### FolderBatch Load Text
 Load a text file and output its content.
@@ -92,15 +88,13 @@ Inputs (required)
 - sort_by (Name|Date|Random): Sorting method.
 - order_by (A-Z|Z-A): Sort direction; Z-A reverses the result, including Random order.
 - seed (INT): Reproduces the exact file order when `sort_by=Random`.
-
-Inputs (optional)
-- audio_count (INT): UI display only.
-- progress (FLOAT): UI display only (0.0 - 1.0).
+- audio_limit (INT): Maximum files to queue; `0` uses every matching file.
 
 Outputs
 - audio_path (STRING): Full path of the selected audio file.
 - file_name (STRING): Selected audio base name without extension.
-- audio_count (INT): Total count of matching files.
+- audio_count (INT): Total matching files detected before applying `audio_limit`.
+- progress (FLOAT): Completion ratio from 0.0 to 1.0.
 
 ### FolderBatch Load Audio
 Load an audio file and output it as AUDIO plus durations.
@@ -124,15 +118,13 @@ Inputs (required)
 - sort_by (Name|Date|Random): Sorting method.
 - order_by (A-Z|Z-A): Sort direction; Z-A reverses the result, including Random order.
 - seed (INT): Reproduces the exact file order when `sort_by=Random`.
-
-Inputs (optional)
-- image_count (INT): UI display only.
-- progress (FLOAT): UI display only (0.0 - 1.0).
+- image_limit (INT): Maximum files to queue; `0` uses every matching file.
 
 Outputs
 - image_path (STRING): Full path of the selected image file.
 - file_name (STRING): Selected image base name without extension.
-- image_count (INT): Total count of matching files.
+- image_count (INT): Total matching files detected before applying `image_limit`.
+- progress (FLOAT): Completion ratio from 0.0 to 1.0.
 
 ### FolderBatch Load Image
 Load an image file and output it as IMAGE and MASK.
@@ -156,15 +148,12 @@ Inputs (required)
 - sort_by (Name|Date|Random): Sorting method.
 - order_by (A-Z|Z-A): Sort direction; Z-A reverses the result, including Random order.
 - seed (INT): Reproduces the exact item order when `sort_by=Random`.
+- item_limit (INT): Maximum synchronized items to queue; `0` uses every matching item.
 - use_image / use_video / use_text / use_audio (BOOLEAN): Enable each media type.
 - image_folder / video_folder / text_folder / audio_folder (STRING): Optional per-media folders.
 - image_extension / video_extension / text_extension / audio_extension (STRING): Glob pattern(s) per media.
 - text_unit_mode (file|line): Use one text file per item, or one text line per item.
 - skip_empty_lines (BOOLEAN): Skip blank lines when `text_unit_mode` is `line`.
-
-Inputs (optional)
-- item_count (INT): UI display only.
-- progress (FLOAT): UI display only (0.0 - 1.0).
 
 Outputs
 - base_name (STRING): Matched basename or first available basename in order mode.
@@ -173,7 +162,8 @@ Outputs
 - text_path (STRING): Selected text path or empty string.
 - line_index (INT): `-1` in file mode, otherwise the 0-based text line index.
 - audio_path (STRING): Selected audio path or empty string.
-- item_count (INT): Total synchronized item count.
+- item_count (INT): Total synchronized items detected before applying `item_limit`.
+- progress (FLOAT): Completion ratio from 0.0 to 1.0.
 
 ## Typical Usage
 
@@ -224,15 +214,13 @@ ComfyUIでフォルダ内のファイルを1つずつキューに流し込むた
 - sort_by (Name|Date|Random): 並び順の基準
 - order_by (A-Z|Z-A): 並び順の向き。RandomでもZ-Aは結果を逆順にします
 - seed (INT): `sort_by=Random` のとき同じファイル順を再現するシード値
-
-入力（任意）
-- video_count (INT): UI表示用
-- progress (FLOAT): UI表示用（0.0 - 1.0）
+- video_limit (INT): キューに入れる最大ファイル数。`0` は一致する全ファイルを使用
 
 出力
 - video_path (STRING): 選択された動画のフルパス
 - file_name (STRING): 選択された動画の拡張子なしファイル名
-- video_count (INT): 対象ファイルの総数
+- video_count (INT): `video_limit` 適用前に検出したファイル総数
+- progress (FLOAT): 0.0〜1.0の進捗率
 
 ### FolderBatch Load Video Frames
 動画を読み込み、フレームをIMAGEバッチで出力し、元動画もVIDEOとして出力します。
@@ -258,17 +246,15 @@ ComfyUIでフォルダ内のファイルを1つずつキューに流し込むた
 - sort_by (Name|Date|Random): 並び順の基準
 - order_by (A-Z|Z-A): 並び順の向き。RandomでもZ-Aは結果を逆順にします
 - seed (INT): `sort_by=Random` のとき同じファイル順を再現するシード値
+- text_limit (INT): キューに入れるファイルまたは行の最大数。`0` は全項目を使用
 - skip_empty_lines (BOOLEAN): 行単位時に空行を飛ばすか
-
-入力（任意）
-- text_count (INT): UI表示用
-- progress (FLOAT): UI表示用（0.0 - 1.0）
 
 出力
 - text_path (STRING): 選択されたテキストのフルパス
 - file_name (STRING): 選択されたテキストの拡張子なしファイル名
-- text_count (INT): 対象項目の総数
+- text_count (INT): `text_limit` 適用前に検出したファイルまたは行の総数
 - line_index (INT): 元の0始まり行番号。fileモードでは `-1`
+- progress (FLOAT): 0.0〜1.0の進捗率
 
 ### FolderBatch Load Text
 テキストファイルを読み込み、内容をSTRINGで出力します。
@@ -294,15 +280,13 @@ ComfyUIでフォルダ内のファイルを1つずつキューに流し込むた
 - sort_by (Name|Date|Random): 並び順の基準
 - order_by (A-Z|Z-A): 並び順の向き。RandomでもZ-Aは結果を逆順にします
 - seed (INT): `sort_by=Random` のとき同じファイル順を再現するシード値
-
-入力（任意）
-- audio_count (INT): UI表示用
-- progress (FLOAT): UI表示用（0.0 - 1.0）
+- audio_limit (INT): キューに入れる最大ファイル数。`0` は一致する全ファイルを使用
 
 出力
 - audio_path (STRING): 選択された音声のフルパス
 - file_name (STRING): 選択された音声の拡張子なしファイル名
-- audio_count (INT): 対象ファイルの総数
+- audio_count (INT): `audio_limit` 適用前に検出したファイル総数
+- progress (FLOAT): 0.0〜1.0の進捗率
 
 ### FolderBatch Load Audio
 音声ファイルを読み込み、AUDIOと長さを出力します。
@@ -326,15 +310,13 @@ ComfyUIでフォルダ内のファイルを1つずつキューに流し込むた
 - sort_by (Name|Date|Random): 並び順の基準
 - order_by (A-Z|Z-A): 並び順の向き。RandomでもZ-Aは結果を逆順にします
 - seed (INT): `sort_by=Random` のとき同じファイル順を再現するシード値
-
-入力（任意）
-- image_count (INT): UI表示用
-- progress (FLOAT): UI表示用（0.0 - 1.0）
+- image_limit (INT): キューに入れる最大ファイル数。`0` は一致する全ファイルを使用
 
 出力
 - image_path (STRING): 選択された画像のフルパス
 - file_name (STRING): 選択された画像の拡張子なしファイル名
-- image_count (INT): 対象ファイルの総数
+- image_count (INT): `image_limit` 適用前に検出したファイル総数
+- progress (FLOAT): 0.0〜1.0の進捗率
 
 ### FolderBatch Load Image
 画像ファイルを読み込み、IMAGEとMASKで出力します。
@@ -358,15 +340,12 @@ ComfyUIでフォルダ内のファイルを1つずつキューに流し込むた
 - sort_by (Name|Date|Random): 並び順の基準
 - order_by (A-Z|Z-A): 並び順の向き。RandomでもZ-Aは結果を逆順にします
 - seed (INT): `sort_by=Random` のとき同じ項目順を再現するシード値
+- item_limit (INT): キューに入れる同期項目の最大数。`0` は全項目を使用
 - use_image / use_video / use_text / use_audio (BOOLEAN): 媒体ごとの使用有無
 - image_folder / video_folder / text_folder / audio_folder (STRING): 媒体ごとの個別フォルダ
 - image_extension / video_extension / text_extension / audio_extension (STRING): 媒体ごとの拡張子グロブ
 - text_unit_mode (file|line): テキストをファイル単位で使うか、行単位で使うか
 - skip_empty_lines (BOOLEAN): `text_unit_mode` が `line` のとき空行をスキップ
-
-入力（任意）
-- item_count (INT): UI表示用
-- progress (FLOAT): UI表示用（0.0 - 1.0）
 
 出力
 - base_name (STRING): 一致したベース名。順番同期では最初に見つかった名前
@@ -375,7 +354,8 @@ ComfyUIでフォルダ内のファイルを1つずつキューに流し込むた
 - text_path (STRING): 対応テキストのパス。なければ空文字
 - line_index (INT): fileモードでは `-1`、lineモードでは0始まりの行番号
 - audio_path (STRING): 対応音声のパス。なければ空文字
-- item_count (INT): 同期対象の総数
+- item_count (INT): `item_limit` 適用前に検出した同期項目の総数
+- progress (FLOAT): 0.0〜1.0の進捗率
 
 ## 典型的な使い方
 

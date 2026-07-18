@@ -9,43 +9,6 @@ export function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export class LatestJsonRequest {
-    abortController = null;
-
-    cancel() {
-        this.abortController?.abort();
-        this.abortController = null;
-    }
-
-    async get(url) {
-        this.cancel();
-        const abortController = new AbortController();
-        this.abortController = abortController;
-
-        try {
-            const response = await fetch(url, { signal: abortController.signal });
-            if (!response.ok) {
-                throw new Error(`Request failed with status ${response.status}`);
-            }
-
-            const data = await response.json();
-            if (this.abortController !== abortController) {
-                return null;
-            }
-            return data;
-        } catch (error) {
-            if (error.name !== "AbortError") {
-                console.error("FolderBatch request failed.", error);
-            }
-            return null;
-        } finally {
-            if (this.abortController === abortController) {
-                this.abortController = null;
-            }
-        }
-    }
-}
-
 let queuePromptOwner = null;
 let pendingQueuePrompt = null;
 

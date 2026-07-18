@@ -45,7 +45,7 @@ def get_files(folder, extension, sort_by="Name", order_by="A-Z", seed=0):
     elif sort_by == "Random":
         random.Random(seed).shuffle(file_list)
 
-    if order_by == "Z-A" and sort_by != "Random":
+    if order_by == "Z-A":
         file_list.reverse()
 
     return file_list
@@ -278,6 +278,8 @@ def build_sync_entries_by_name(
         )
     elif sort_by == "Random":
         random.Random(seed).shuffle(candidate_names)
+        if order_by == "Z-A":
+            candidate_names.reverse()
     else:
         candidate_names.sort(reverse=order_by == "Z-A")
 

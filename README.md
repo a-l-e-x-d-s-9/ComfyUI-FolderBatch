@@ -20,7 +20,7 @@ Inputs (required)
 - start_at (INT): Start index (0-based).
 - auto_queue (BOOLEAN): If enabled, triggers next queue automatically.
 - sort_by (Name|Date|Random): Sorting method.
-- order_by (A-Z|Z-A): Sort order.
+- order_by (A-Z|Z-A): Sort direction; Z-A reverses the result, including Random order.
 - seed (INT): Reproduces the exact file order when `sort_by=Random`.
 
 Inputs (optional)
@@ -54,7 +54,7 @@ Inputs (required)
 - start_at (INT): Start index (0-based).
 - auto_queue (BOOLEAN): If enabled, triggers next queue automatically.
 - sort_by (Name|Date|Random): Sorting method.
-- order_by (A-Z|Z-A): Sort order.
+- order_by (A-Z|Z-A): Sort direction; Z-A reverses the result, including Random order.
 - seed (INT): Reproduces the exact file order when `sort_by=Random`.
 - skip_empty_lines (BOOLEAN): Skip blank lines in line mode.
 
@@ -90,7 +90,7 @@ Inputs (required)
 - start_at (INT): Start index (0-based).
 - auto_queue (BOOLEAN): If enabled, triggers next queue automatically.
 - sort_by (Name|Date|Random): Sorting method.
-- order_by (A-Z|Z-A): Sort order.
+- order_by (A-Z|Z-A): Sort direction; Z-A reverses the result, including Random order.
 - seed (INT): Reproduces the exact file order when `sort_by=Random`.
 
 Inputs (optional)
@@ -122,7 +122,7 @@ Inputs (required)
 - start_at (INT): Start index (0-based).
 - auto_queue (BOOLEAN): If enabled, triggers next queue automatically.
 - sort_by (Name|Date|Random): Sorting method.
-- order_by (A-Z|Z-A): Sort order.
+- order_by (A-Z|Z-A): Sort direction; Z-A reverses the result, including Random order.
 - seed (INT): Reproduces the exact file order when `sort_by=Random`.
 
 Inputs (optional)
@@ -154,7 +154,7 @@ Inputs (required)
 - start_at (INT): Start index (0-based).
 - auto_queue (BOOLEAN): If enabled, triggers next queue automatically.
 - sort_by (Name|Date|Random): Sorting method.
-- order_by (A-Z|Z-A): Sort order.
+- order_by (A-Z|Z-A): Sort direction; Z-A reverses the result, including Random order.
 - seed (INT): Reproduces the exact item order when `sort_by=Random`.
 - use_image / use_video / use_text / use_audio (BOOLEAN): Enable each media type.
 - image_folder / video_folder / text_folder / audio_folder (STRING): Optional per-media folders.
@@ -222,7 +222,7 @@ ComfyUIでフォルダ内のファイルを1つずつキューに流し込むた
 - start_at (INT): 開始インデックス（0始まり）
 - auto_queue (BOOLEAN): 有効なら自動で次をキュー
 - sort_by (Name|Date|Random): 並び順の基準
-- order_by (A-Z|Z-A): 並び順の向き
+- order_by (A-Z|Z-A): 並び順の向き。RandomでもZ-Aは結果を逆順にします
 - seed (INT): `sort_by=Random` のとき同じファイル順を再現するシード値
 
 入力（任意）
@@ -256,7 +256,7 @@ ComfyUIでフォルダ内のファイルを1つずつキューに流し込むた
 - start_at (INT): 開始インデックス（0始まり）
 - auto_queue (BOOLEAN): 有効なら自動で次をキュー
 - sort_by (Name|Date|Random): 並び順の基準
-- order_by (A-Z|Z-A): 並び順の向き
+- order_by (A-Z|Z-A): 並び順の向き。RandomでもZ-Aは結果を逆順にします
 - seed (INT): `sort_by=Random` のとき同じファイル順を再現するシード値
 - skip_empty_lines (BOOLEAN): 行単位時に空行を飛ばすか
 
@@ -292,7 +292,7 @@ ComfyUIでフォルダ内のファイルを1つずつキューに流し込むた
 - start_at (INT): 開始インデックス（0始まり）
 - auto_queue (BOOLEAN): 有効なら自動で次をキュー
 - sort_by (Name|Date|Random): 並び順の基準
-- order_by (A-Z|Z-A): 並び順の向き
+- order_by (A-Z|Z-A): 並び順の向き。RandomでもZ-Aは結果を逆順にします
 - seed (INT): `sort_by=Random` のとき同じファイル順を再現するシード値
 
 入力（任意）
@@ -324,7 +324,7 @@ ComfyUIでフォルダ内のファイルを1つずつキューに流し込むた
 - start_at (INT): 開始インデックス（0始まり）
 - auto_queue (BOOLEAN): 有効なら自動で次をキュー
 - sort_by (Name|Date|Random): 並び順の基準
-- order_by (A-Z|Z-A): 並び順の向き
+- order_by (A-Z|Z-A): 並び順の向き。RandomでもZ-Aは結果を逆順にします
 - seed (INT): `sort_by=Random` のとき同じファイル順を再現するシード値
 
 入力（任意）
@@ -356,7 +356,7 @@ ComfyUIでフォルダ内のファイルを1つずつキューに流し込むた
 - start_at (INT): 開始インデックス（0始まり）
 - auto_queue (BOOLEAN): 有効なら自動で次をキュー
 - sort_by (Name|Date|Random): 並び順の基準
-- order_by (A-Z|Z-A): 並び順の向き
+- order_by (A-Z|Z-A): 並び順の向き。RandomでもZ-Aは結果を逆順にします
 - seed (INT): `sort_by=Random` のとき同じ項目順を再現するシード値
 - use_image / use_video / use_text / use_audio (BOOLEAN): 媒体ごとの使用有無
 - image_folder / video_folder / text_folder / audio_folder (STRING): 媒体ごとの個別フォルダ

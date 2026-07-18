@@ -1,7 +1,8 @@
 import { app } from "/scripts/app.js";
-import { findWidgetByName, sleep } from "./modules/utils.js";
+import { findWidgetByName, LatestJsonRequest, releaseQueuePromptOwner, scheduleQueuePrompt } from "./modules/utils.js";
 
 const API_BASE_URL = "/folderbatch/image-queue/";
+const CONTROLLER = Symbol("folderbatchImageQueueController");
 
 class FolderBatchImageQueue {
     folderWidget;
@@ -11,18 +12,19 @@ class FolderBatchImageQueue {
     autoQueueWidget;
     progressWidget;
     imageCount = 0;
+    countRequest = new LatestJsonRequest();
 
-    getImageCount() {
-        return new Promise(async (resolve) => {
-            const folder = encodeURIComponent(this.folderWidget.value ?? "");
-            const extension = encodeURIComponent(this.extensionWidget.value ?? "");
-            const url = API_BASE_URL + `get_image_count?folder=${folder}&extension=${extension}`;
+    async getImageCount() {
+        const folder = encodeURIComponent(this.folderWidget.value ?? "");
+        const extension = encodeURIComponent(this.extensionWidget.value ?? "");
+        const url = API_BASE_URL + `get_image_count?folder=${folder}&extension=${extension}`;
+        const data = await this.countRequest.get(url);
 
-            const response = await fetch(url);
-            const data = await response.json();
-            this.imageCount = parseInt(data["image_count"]);
-            resolve(this.imageCount);
-        });
+        if (data !== null) {
+            const count = Number.parseInt(data["image_count"], 10);
+            this.imageCount = Number.isFinite(count) ? count : 0;
+        }
+        return this.imageCount;
     }
 
     refreshImageCount() {
@@ -43,10 +45,12 @@ class FolderBatchImageQueue {
             this.refreshProgress(startAt);
 
             if (this.autoQueueWidget.value) {
-                await sleep(200);
-                app.queuePrompt(0, 1);
+                await scheduleQueuePrompt(app, this, () => this.autoQueueWidget.value);
+            } else {
+                releaseQueuePromptOwner(this);
             }
         } else if (startAt + 1 >= imageCount) {
+            releaseQueuePromptOwner(this);
             this.startAtWidget.value = 0;
             if (this.progressWidget) {
                 this.progressWidget.value = 0;
@@ -84,11 +88,11 @@ app.registerExtension({
     async beforeRegisterNodeDef(nodeType, nodeData) {
         if (nodeData.name !== "FolderBatch Image Queue") return;
 
-        const folderImageQueue = new FolderBatchImageQueue();
-
         const origOnNodeCreated = nodeType.prototype.onNodeCreated;
         nodeType.prototype.onNodeCreated = function () {
             const r = origOnNodeCreated ? origOnNodeCreated.apply(this) : undefined;
+            const folderImageQueue = new FolderBatchImageQueue();
+            this[CONTROLLER] = folderImageQueue;
 
             const folderWidget = findWidgetByName(this, "folder");
             const extensionWidget = findWidgetByName(this, "extension");
@@ -115,7 +119,15 @@ app.registerExtension({
 
             const imageCount = message["image_count"][0];
             const startAt = message["start_at"][0];
-            folderImageQueue.onExecuted(imageCount, startAt);
+            this[CONTROLLER]?.onExecuted(imageCount, startAt);
+        };
+
+        const onRemoved = nodeType.prototype.onRemoved;
+        nodeType.prototype.onRemoved = function () {
+            const controller = this[CONTROLLER];
+            releaseQueuePromptOwner(controller);
+            controller?.countRequest.cancel();
+            return onRemoved?.apply(this, arguments);
         };
     },
 });

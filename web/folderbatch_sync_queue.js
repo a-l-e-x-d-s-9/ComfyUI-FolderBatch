@@ -1,7 +1,8 @@
 import { app } from "/scripts/app.js";
-import { findWidgetByName, sleep } from "./modules/utils.js";
+import { findWidgetByName, LatestJsonRequest, releaseQueuePromptOwner, scheduleQueuePrompt } from "./modules/utils.js";
 
 const API_BASE_URL = "/folderbatch/sync-queue/";
+const CONTROLLER = Symbol("folderbatchSyncQueueController");
 
 class FolderBatchSyncQueue {
     node;
@@ -10,6 +11,7 @@ class FolderBatchSyncQueue {
     autoQueueWidget;
     progressWidget;
     itemCount = 0;
+    countRequest = new LatestJsonRequest();
 
     getParams() {
         const names = [
@@ -44,14 +46,15 @@ class FolderBatchSyncQueue {
         return params.toString();
     }
 
-    getItemCount() {
-        return new Promise(async (resolve) => {
-            const url = API_BASE_URL + `get_sync_count?${this.getParams()}`;
-            const response = await fetch(url);
-            const data = await response.json();
-            this.itemCount = parseInt(data["item_count"]);
-            resolve(this.itemCount);
-        });
+    async getItemCount() {
+        const url = API_BASE_URL + `get_sync_count?${this.getParams()}`;
+        const data = await this.countRequest.get(url);
+
+        if (data !== null) {
+            const count = Number.parseInt(data["item_count"], 10);
+            this.itemCount = Number.isFinite(count) ? count : 0;
+        }
+        return this.itemCount;
     }
 
     refreshItemCount() {
@@ -72,10 +75,12 @@ class FolderBatchSyncQueue {
             this.refreshProgress(startAt);
 
             if (this.autoQueueWidget.value) {
-                await sleep(200);
-                app.queuePrompt(0, 1);
+                await scheduleQueuePrompt(app, this, () => this.autoQueueWidget.value);
+            } else {
+                releaseQueuePromptOwner(this);
             }
         } else if (startAt + 1 >= itemCount) {
+            releaseQueuePromptOwner(this);
             this.startAtWidget.value = 0;
             if (this.progressWidget) {
                 this.progressWidget.value = 0;
@@ -135,11 +140,11 @@ app.registerExtension({
     async beforeRegisterNodeDef(nodeType, nodeData) {
         if (nodeData.name !== "FolderBatch Sync Queue") return;
 
-        const folderSyncQueue = new FolderBatchSyncQueue();
-
         const origOnNodeCreated = nodeType.prototype.onNodeCreated;
         nodeType.prototype.onNodeCreated = function () {
             const r = origOnNodeCreated ? origOnNodeCreated.apply(this) : undefined;
+            const folderSyncQueue = new FolderBatchSyncQueue();
+            this[CONTROLLER] = folderSyncQueue;
 
             const startAtWidget = findWidgetByName(this, "start_at");
             const autoQueueWidget = findWidgetByName(this, "auto_queue");
@@ -163,7 +168,15 @@ app.registerExtension({
 
             const itemCount = message["item_count"][0];
             const startAt = message["start_at"][0];
-            folderSyncQueue.onExecuted(itemCount, startAt);
+            this[CONTROLLER]?.onExecuted(itemCount, startAt);
+        };
+
+        const onRemoved = nodeType.prototype.onRemoved;
+        nodeType.prototype.onRemoved = function () {
+            const controller = this[CONTROLLER];
+            releaseQueuePromptOwner(controller);
+            controller?.countRequest.cancel();
+            return onRemoved?.apply(this, arguments);
         };
     },
 });

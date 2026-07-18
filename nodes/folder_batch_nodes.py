@@ -32,7 +32,11 @@ def get_files(folder, extension, sort_by="Name", order_by="A-Z", seed=0):
         search_pattern = os.path.join(folder, pattern)
         file_list.extend(glob.glob(search_pattern))
 
-    file_list = sorted({os.path.abspath(file) for file in file_list})
+    file_list = sorted({
+        os.path.abspath(file)
+        for file in file_list
+        if os.path.isfile(file)
+    })
 
     if sort_by == "Name":
         file_list = sorted(file_list, key=lambda x: os.path.basename(x))
@@ -202,11 +206,13 @@ def build_sync_entries(
         )
 
     if sync_mode == "By Name":
-        entries = build_sync_entries_by_name(media_files, missing_policy)
-        if sort_by == "Random":
-            random.Random(seed).shuffle(entries)
-        elif order_by == "Z-A":
-            entries.reverse()
+        entries = build_sync_entries_by_name(
+            media_files,
+            missing_policy,
+            sort_by,
+            order_by,
+            seed,
+        )
     else:
         entries = build_sync_entries_by_order(media_files, missing_policy)
 
@@ -237,7 +243,13 @@ def expand_sync_text_entries(entries, text_unit_mode="file", skip_empty_lines=Tr
     return expanded_entries
 
 
-def build_sync_entries_by_name(media_files, missing_policy):
+def build_sync_entries_by_name(
+    media_files,
+    missing_policy,
+    sort_by="Name",
+    order_by="A-Z",
+    seed=0,
+):
     name_maps = {
         key: {get_base_name(path): path for path in paths}
         for key, paths in media_files.items()
@@ -254,6 +266,20 @@ def build_sync_entries_by_name(media_files, missing_policy):
         ]
     else:
         candidate_names = all_names
+
+    if sort_by == "Date":
+        def get_date_sort_key(name):
+            path = next(mapping[name] for mapping in name_maps.values() if name in mapping)
+            return (os.path.getmtime(path), path)
+
+        candidate_names.sort(
+            key=get_date_sort_key,
+            reverse=order_by == "Z-A",
+        )
+    elif sort_by == "Random":
+        random.Random(seed).shuffle(candidate_names)
+    else:
+        candidate_names.sort(reverse=order_by == "Z-A")
 
     entries = []
     for name in candidate_names:

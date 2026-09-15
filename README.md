@@ -19,6 +19,7 @@ Inputs (required)
 - extension (STRING): Glob pattern, default `*.mp4`.
 - start_at (INT): Start index (0-based).
 - auto_queue (BOOLEAN): If enabled, triggers next queue automatically.
+- queue_all (BOOLEAN): Queue every remaining item after the first item starts. When enabled, `auto_queue` is ignored and the browser may be closed after all items appear in ComfyUI's queue.
 - sort_by (Name|Date|Random): Sorting method.
 - order_by (A-Z|Z-A): Sort direction; Z-A reverses the result, including Random order.
 - seed (INT): Reproduces the exact file order when `sort_by=Random`.
@@ -51,6 +52,7 @@ Inputs (required)
 - extension (STRING): Glob pattern, default `*.txt`.
 - start_at (INT): Start index (0-based).
 - auto_queue (BOOLEAN): If enabled, triggers next queue automatically.
+- queue_all (BOOLEAN): Queue every remaining item after the first item starts. When enabled, `auto_queue` is ignored and the browser may be closed after all items appear in ComfyUI's queue.
 - sort_by (Name|Date|Random): Sorting method.
 - order_by (A-Z|Z-A): Sort direction; Z-A reverses the result, including Random order.
 - seed (INT): Reproduces the exact file order when `sort_by=Random`.
@@ -85,6 +87,7 @@ Inputs (required)
 - extension (STRING): Glob pattern(s), default `*.mp3;*.wav;*.flac;*.m4a;*.ogg;*.aac`.
 - start_at (INT): Start index (0-based).
 - auto_queue (BOOLEAN): If enabled, triggers next queue automatically.
+- queue_all (BOOLEAN): Queue every remaining item after the first item starts. When enabled, `auto_queue` is ignored and the browser may be closed after all items appear in ComfyUI's queue.
 - sort_by (Name|Date|Random): Sorting method.
 - order_by (A-Z|Z-A): Sort direction; Z-A reverses the result, including Random order.
 - seed (INT): Reproduces the exact file order when `sort_by=Random`.
@@ -115,6 +118,7 @@ Inputs (required)
 - extension (STRING): Glob pattern(s), default `*.png;*.jpg;*.jpeg;*.webp;*.bmp`.
 - start_at (INT): Start index (0-based).
 - auto_queue (BOOLEAN): If enabled, triggers next queue automatically.
+- queue_all (BOOLEAN): Queue every remaining item after the first item starts. When enabled, `auto_queue` is ignored and the browser may be closed after all items appear in ComfyUI's queue.
 - sort_by (Name|Date|Random): Sorting method.
 - order_by (A-Z|Z-A): Sort direction; Z-A reverses the result, including Random order.
 - seed (INT): Reproduces the exact file order when `sort_by=Random`.
@@ -145,6 +149,7 @@ Inputs (required)
 - missing_policy (Skip|Error|Empty): Skip incomplete sets, stop on mismatch, or output empty paths.
 - start_at (INT): Start index (0-based).
 - auto_queue (BOOLEAN): If enabled, triggers next queue automatically.
+- queue_all (BOOLEAN): Queue every remaining item after the first item starts. When enabled, `auto_queue` is ignored and the browser may be closed after all items appear in ComfyUI's queue.
 - sort_by (Name|Date|Random): Sorting method.
 - order_by (A-Z|Z-A): Sort direction; Z-A reverses the result, including Random order.
 - seed (INT): Reproduces the exact item order when `sort_by=Random`.
@@ -211,6 +216,7 @@ ComfyUIでフォルダ内のファイルを1つずつキューに流し込むた
 - extension (STRING): 拡張子のグロブ（例: `*.mp4`）
 - start_at (INT): 開始インデックス（0始まり）
 - auto_queue (BOOLEAN): 有効なら自動で次をキュー
+- queue_all (BOOLEAN): 最初の項目の開始後、残りをすべてキューに追加します。有効時は `auto_queue` は無視され、全項目がComfyUIのキューに表示された後はブラウザを閉じられます
 - sort_by (Name|Date|Random): 並び順の基準
 - order_by (A-Z|Z-A): 並び順の向き。RandomでもZ-Aは結果を逆順にします
 - seed (INT): `sort_by=Random` のとき同じファイル順を再現するシード値
@@ -243,6 +249,7 @@ ComfyUIでフォルダ内のファイルを1つずつキューに流し込むた
 - extension (STRING): 拡張子のグロブ（例: `*.txt`）
 - start_at (INT): 開始インデックス（0始まり）
 - auto_queue (BOOLEAN): 有効なら自動で次をキュー
+- queue_all (BOOLEAN): 最初の項目の開始後、残りをすべてキューに追加します。有効時は `auto_queue` は無視され、全項目がComfyUIのキューに表示された後はブラウザを閉じられます
 - sort_by (Name|Date|Random): 並び順の基準
 - order_by (A-Z|Z-A): 並び順の向き。RandomでもZ-Aは結果を逆順にします
 - seed (INT): `sort_by=Random` のとき同じファイル順を再現するシード値
@@ -277,6 +284,7 @@ ComfyUIでフォルダ内のファイルを1つずつキューに流し込むた
 - extension (STRING): 拡張子グロブ。複数指定可。既定値 `*.mp3;*.wav;*.flac;*.m4a;*.ogg;*.aac`
 - start_at (INT): 開始インデックス（0始まり）
 - auto_queue (BOOLEAN): 有効なら自動で次をキュー
+- queue_all (BOOLEAN): 最初の項目の開始後、残りをすべてキューに追加します。有効時は `auto_queue` は無視され、全項目がComfyUIのキューに表示された後はブラウザを閉じられます
 - sort_by (Name|Date|Random): 並び順の基準
 - order_by (A-Z|Z-A): 並び順の向き。RandomでもZ-Aは結果を逆順にします
 - seed (INT): `sort_by=Random` のとき同じファイル順を再現するシード値
@@ -307,6 +315,7 @@ ComfyUIでフォルダ内のファイルを1つずつキューに流し込むた
 - extension (STRING): 拡張子グロブ。複数指定可。既定値 `*.png;*.jpg;*.jpeg;*.webp;*.bmp`
 - start_at (INT): 開始インデックス（0始まり）
 - auto_queue (BOOLEAN): 有効なら自動で次をキュー
+- queue_all (BOOLEAN): 最初の項目の開始後、残りをすべてキューに追加します。有効時は `auto_queue` は無視され、全項目がComfyUIのキューに表示された後はブラウザを閉じられます
 - sort_by (Name|Date|Random): 並び順の基準
 - order_by (A-Z|Z-A): 並び順の向き。RandomでもZ-Aは結果を逆順にします
 - seed (INT): `sort_by=Random` のとき同じファイル順を再現するシード値
@@ -337,6 +346,7 @@ ComfyUIでフォルダ内のファイルを1つずつキューに流し込むた
 - missing_policy (Skip|Error|Empty): 欠損セットをスキップ、エラー停止、空パス出力
 - start_at (INT): 開始インデックス（0始まり）
 - auto_queue (BOOLEAN): 有効なら自動で次をキュー
+- queue_all (BOOLEAN): 最初の項目の開始後、残りをすべてキューに追加します。有効時は `auto_queue` は無視され、全項目がComfyUIのキューに表示された後はブラウザを閉じられます
 - sort_by (Name|Date|Random): 並び順の基準
 - order_by (A-Z|Z-A): 並び順の向き。RandomでもZ-Aは結果を逆順にします
 - seed (INT): `sort_by=Random` のとき同じ項目順を再現するシード値

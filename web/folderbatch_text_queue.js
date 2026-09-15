@@ -1,5 +1,5 @@
 import { app } from "/scripts/app.js";
-import { findWidgetByName, releaseQueuePromptOwner, scheduleQueuePrompt } from "./modules/utils.js";
+import { findWidgetByName, QueueExecutionController } from "./modules/utils.js";
 
 const HIDDEN_TAG = "folderbatch_hidden";
 const CONTROLLER = Symbol("folderbatchTextQueueController");
@@ -31,9 +31,8 @@ class FolderBatchTextQueue {
     folderWidget;
     textPathWidget;
     extensionWidget;
-    startAtWidget;
-    autoQueueWidget;
     skipEmptyLinesWidget;
+    executionController;
 
     normalizeModes() {
         if (this.sourceModeWidget.value === "file" && this.unitModeWidget.value !== "line") {
@@ -64,29 +63,22 @@ class FolderBatchTextQueue {
     }
 
     async onExecuted(queueCount, startAt) {
-        if (startAt + 1 < queueCount) {
-            this.startAtWidget.value = startAt + 1;
-
-            if (this.autoQueueWidget.value) {
-                await scheduleQueuePrompt(app, this, () => this.autoQueueWidget.value);
-            } else {
-                releaseQueuePromptOwner(this);
-            }
-        } else if (startAt + 1 >= queueCount) {
-            releaseQueuePromptOwner(this);
-            this.startAtWidget.value = 0;
-        }
+        await this.executionController.onExecuted(queueCount, startAt);
     }
 
-    initWidget(node, sourceModeWidget, unitModeWidget, folderWidget, textPathWidget, extensionWidget, startAtWidget, autoQueueWidget, skipEmptyLinesWidget) {
+    initWidget(node, sourceModeWidget, unitModeWidget, folderWidget, textPathWidget, extensionWidget, startAtWidget, autoQueueWidget, queueAllWidget, skipEmptyLinesWidget) {
         this.sourceModeWidget = sourceModeWidget;
         this.unitModeWidget = unitModeWidget;
         this.folderWidget = folderWidget;
         this.textPathWidget = textPathWidget;
         this.extensionWidget = extensionWidget;
-        this.startAtWidget = startAtWidget;
-        this.autoQueueWidget = autoQueueWidget;
         this.skipEmptyLinesWidget = skipEmptyLinesWidget;
+        this.executionController = new QueueExecutionController(
+            app,
+            startAtWidget,
+            autoQueueWidget,
+            queueAllWidget
+        );
 
         sourceModeWidget.callback = () => {
             this.normalizeModes();
@@ -101,6 +93,10 @@ class FolderBatchTextQueue {
             this.normalizeModes();
             this.refreshWidgetVisibility(node);
         }, 100);
+    }
+
+    remove() {
+        this.executionController.remove();
     }
 }
 
@@ -123,6 +119,7 @@ app.registerExtension({
             const extensionWidget = findWidgetByName(this, "extension");
             const startAtWidget = findWidgetByName(this, "start_at");
             const autoQueueWidget = findWidgetByName(this, "auto_queue");
+            const queueAllWidget = findWidgetByName(this, "queue_all");
             const skipEmptyLinesWidget = findWidgetByName(this, "skip_empty_lines");
 
             folderTextQueue.initWidget(
@@ -134,6 +131,7 @@ app.registerExtension({
                 extensionWidget,
                 startAtWidget,
                 autoQueueWidget,
+                queueAllWidget,
                 skipEmptyLinesWidget
             );
 
@@ -151,8 +149,7 @@ app.registerExtension({
 
         const onRemoved = nodeType.prototype.onRemoved;
         nodeType.prototype.onRemoved = function () {
-            const controller = this[CONTROLLER];
-            releaseQueuePromptOwner(controller);
+            this[CONTROLLER]?.remove();
             return onRemoved?.apply(this, arguments);
         };
     },

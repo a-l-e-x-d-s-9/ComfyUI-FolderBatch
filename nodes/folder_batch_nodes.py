@@ -363,6 +363,7 @@ class FB_FolderVideoQueue:
                 "order_by": (["A-Z", "Z-A"], {"default": "A-Z"}),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
                 "video_limit": ("INT", {"default": 0, "min": 0}),
+                "queue_all": ("BOOLEAN", {"default": False}),
             },
         }
 
@@ -381,6 +382,7 @@ class FB_FolderVideoQueue:
         order_by="A-Z",
         seed=0,
         video_limit=0,
+        queue_all=False,
         video_count=0,
         progress=0.0,
     ):
@@ -491,6 +493,7 @@ class FB_FolderTextQueue:
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
                 "text_limit": ("INT", {"default": 0, "min": 0}),
                 "skip_empty_lines": ("BOOLEAN", {"default": True}),
+                "queue_all": ("BOOLEAN", {"default": False}),
             },
         }
 
@@ -513,6 +516,7 @@ class FB_FolderTextQueue:
         seed=0,
         text_limit=0,
         skip_empty_lines=True,
+        queue_all=False,
         text_count=0,
         progress=0.0,
     ):
@@ -674,6 +678,7 @@ class FB_FolderAudioQueue:
                 "order_by": (["A-Z", "Z-A"], {"default": "A-Z"}),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
                 "audio_limit": ("INT", {"default": 0, "min": 0}),
+                "queue_all": ("BOOLEAN", {"default": False}),
             },
         }
 
@@ -692,6 +697,7 @@ class FB_FolderAudioQueue:
         order_by="A-Z",
         seed=0,
         audio_limit=0,
+        queue_all=False,
         audio_count=0,
         progress=0.0,
     ):
@@ -802,6 +808,7 @@ class FB_FolderImageQueue:
                 "order_by": (["A-Z", "Z-A"], {"default": "A-Z"}),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
                 "image_limit": ("INT", {"default": 0, "min": 0}),
+                "queue_all": ("BOOLEAN", {"default": False}),
             },
         }
 
@@ -820,6 +827,7 @@ class FB_FolderImageQueue:
         order_by="A-Z",
         seed=0,
         image_limit=0,
+        queue_all=False,
         image_count=0,
         progress=0.0,
     ):
@@ -986,6 +994,7 @@ class FB_FolderSyncQueue:
                 "use_audio": ("BOOLEAN", {"default": False}),
                 "audio_folder": ("STRING", {"default": ""}),
                 "audio_extension": ("STRING", {"default": "*.mp3;*.wav;*.flac;*.m4a;*.ogg;*.aac"}),
+                "queue_all": ("BOOLEAN", {"default": False}),
             },
         }
 
@@ -1019,6 +1028,7 @@ class FB_FolderSyncQueue:
         use_audio=False,
         audio_folder="",
         audio_extension="*.mp3;*.wav;*.flac;*.m4a;*.ogg;*.aac",
+        queue_all=False,
         item_count=0,
         progress=0.0,
     ):

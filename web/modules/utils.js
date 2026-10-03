@@ -11,7 +11,58 @@ export function sleep(ms) {
 
 let queuePromptOwner = null;
 let pendingQueuePrompt = null;
-let pendingQueuePromptMode = null;
+const queueControllers = new Set();
+const lifecycleApis = new WeakSet();
+
+// A clear must stop submissions before clearing the server queue, otherwise an
+// in-flight submission could arrive after the clear and leave a prompt behind.
+export function installQueueLifecycle(api) {
+    if (lifecycleApis.has(api)) return;
+    lifecycleApis.add(api);
+    let cancelling = 0;
+
+    const stop = (clearQueued) => {
+        for (const controller of queueControllers) {
+            controller.stop(clearQueued);
+        }
+        return pendingQueuePrompt;
+    };
+
+    api.addEventListener("execution_start", () => {
+        if (cancelling === 0) {
+            for (const controller of queueControllers) controller.suspended = false;
+        }
+    });
+    api.addEventListener("execution_interrupted", () => stop(false));
+    api.addEventListener("execution_error", () => stop(false));
+    api.addEventListener("status", (event) => {
+        // A short workflow may finish before the delayed submissions begin.
+        // Keep that active submission loop alive through a temporary empty queue.
+        if (event.detail?.exec_info?.queue_remaining === 0 &&
+            (!pendingQueuePrompt || queuePromptOwner === null)) {
+            stop(true);
+        }
+    });
+
+    for (const [name, shouldStop, clearQueued] of [
+        ["clearItems", (type) => type === "queue", true],
+        ["interrupt", () => true, false],
+    ]) {
+        const original = api[name];
+        if (typeof original !== "function") continue;
+        api[name] = async function (...args) {
+            if (!shouldStop(...args)) return original.apply(this, args);
+            cancelling += 1;
+            try {
+                const pending = stop(clearQueued);
+                if (clearQueued && pending) await pending.catch(() => {});
+                return await original.apply(this, args);
+            } finally {
+                cancelling -= 1;
+            }
+        };
+    }
+}
 
 function claimQueuePromptOwner(owner) {
     if (queuePromptOwner === null) {
@@ -33,13 +84,16 @@ export async function scheduleQueuePrompt(app, owner, shouldQueue, delayMs = 200
     }
 
     if (pendingQueuePrompt) {
-        return pendingQueuePrompt;
+        await pendingQueuePrompt.catch(() => {});
+        if (!shouldQueue()) return false;
+        return scheduleQueuePrompt(app, owner, shouldQueue, delayMs);
     }
 
     const scheduledOwner = owner;
+    const generation = owner.generation;
     const request = (async () => {
         await sleep(delayMs);
-        if (queuePromptOwner !== scheduledOwner) {
+        if (queuePromptOwner !== scheduledOwner || owner.generation !== generation) {
             return false;
         }
         if (!shouldQueue()) {
@@ -50,18 +104,16 @@ export async function scheduleQueuePrompt(app, owner, shouldQueue, delayMs = 200
         return true;
     })();
     pendingQueuePrompt = request;
-    pendingQueuePromptMode = "single";
 
     try {
         return await request;
     } catch (error) {
-        releaseQueuePromptOwner(scheduledOwner);
+        if (owner.generation === generation) releaseQueuePromptOwner(scheduledOwner);
         console.error("FolderBatch failed to queue the next prompt.", error);
         return false;
     } finally {
         if (pendingQueuePrompt === request) {
             pendingQueuePrompt = null;
-            pendingQueuePromptMode = null;
         }
     }
 }
@@ -80,21 +132,23 @@ export async function scheduleAllQueuePrompts(
     }
 
     if (pendingQueuePrompt) {
-        const pendingMode = pendingQueuePromptMode;
-        const result = await pendingQueuePrompt;
-        return pendingMode === "all"
-            ? result
-            : { lastQueued: startAt, completed: false };
+        await pendingQueuePrompt.catch(() => {});
+        if (!shouldQueue()) return { lastQueued: startAt, completed: false };
+        return scheduleAllQueuePrompts(app, owner, startAtWidget, shouldQueue, startAt, queueCount, delayMs);
     }
 
     const scheduledOwner = owner;
+    const generation = owner.generation;
     const request = (async () => {
         let lastQueued = startAt;
         await sleep(delayMs);
 
         try {
             for (let index = startAt + 1; index < queueCount; index += 1) {
-                if (queuePromptOwner !== scheduledOwner || !shouldQueue()) {
+                if (queuePromptOwner !== scheduledOwner || owner.generation !== generation) {
+                    return { lastQueued, completed: false };
+                }
+                if (!shouldQueue()) {
                     releaseQueuePromptOwner(scheduledOwner);
                     return { lastQueued, completed: false };
                 }
@@ -105,20 +159,18 @@ export async function scheduleAllQueuePrompts(
             }
             return { lastQueued, completed: true };
         } catch (error) {
-            releaseQueuePromptOwner(scheduledOwner);
+            if (owner.generation === generation) releaseQueuePromptOwner(scheduledOwner);
             console.error("FolderBatch failed to queue all remaining prompts.", error);
             return { lastQueued, completed: false };
         }
     })();
     pendingQueuePrompt = request;
-    pendingQueuePromptMode = "all";
 
     try {
         return await request;
     } finally {
         if (pendingQueuePrompt === request) {
             pendingQueuePrompt = null;
-            pendingQueuePromptMode = null;
         }
     }
 }
@@ -130,44 +182,62 @@ export class QueueExecutionController {
         this.autoQueueWidget = autoQueueWidget;
         this.queueAllWidget = queueAllWidget;
         this.queuedThrough = -1;
+        this.generation = 0;
+        this.suspended = false;
+        queueControllers.add(this);
+    }
+
+    stop(clearQueued = true) {
+        this.generation += 1;
+        this.suspended = true;
+        if (clearQueued) this.queuedThrough = -1;
+        releaseQueuePromptOwner(this);
     }
 
     async onExecuted(queueCount, startAt) {
+        // Ignore late output from the execution that was just cancelled.
+        if (this.suspended) return;
+        const generation = this.generation;
+        const isActive = () => this.generation === generation && !this.suspended;
         const nextIndex = startAt + 1;
         if (nextIndex >= queueCount) {
-            this.queuedThrough = -1;
-            releaseQueuePromptOwner(this);
+            this.stop();
+            this.suspended = false;
             this.startAtWidget.value = 0;
             return;
         }
 
-        this.startAtWidget.value = nextIndex;
         if (this.queuedThrough >= nextIndex) {
             return;
         }
+        this.startAtWidget.value = nextIndex;
 
         if (this.queueAllWidget.value) {
+            // Reserve the range before awaiting submissions. Executions can
+            // finish while the browser is still adding the rest of the batch.
+            this.queuedThrough = queueCount - 1;
             const result = await scheduleAllQueuePrompts(
                 this.app,
                 this,
                 this.startAtWidget,
-                () => this.queueAllWidget.value,
+                () => isActive() && this.queueAllWidget.value,
                 startAt,
                 queueCount
             );
-            this.queuedThrough = Math.max(this.queuedThrough, result.lastQueued);
+            if (isActive()) this.queuedThrough = result.lastQueued;
             return;
         }
 
         this.queuedThrough = -1;
         if (this.autoQueueWidget.value) {
-            await scheduleQueuePrompt(this.app, this, () => this.autoQueueWidget.value);
+            await scheduleQueuePrompt(this.app, this, () => isActive() && this.autoQueueWidget.value);
         } else {
             releaseQueuePromptOwner(this);
         }
     }
 
     remove() {
-        releaseQueuePromptOwner(this);
+        this.stop();
+        queueControllers.delete(this);
     }
 }

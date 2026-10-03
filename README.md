@@ -179,6 +179,8 @@ Outputs
 
 Connect `current_index` to an INT display node to see the selected item's position during execution. This also works with `queue_all`, where the `start_at` widget may advance ahead as remaining items are submitted.
 
+To resume after cancelling a batch, clear the pending queue, set `start_at` to the desired 0-based index, and run again with `queue_all` enabled. Clearing the queue resets the submitted-item tracking and stops further submissions without changing your selected `start_at`; no browser refresh is needed. Interrupting only the running job leaves pending jobs in ComfyUI's queue, so clear those too when replacing the batch.
+
 Video batch:
 1) FolderBatch Video Queue -> video_path
 2) FolderBatch Load Video Frames -> images
@@ -382,6 +384,8 @@ ComfyUIでフォルダ内のファイルを1つずつキューに流し込むた
 ## 典型的な使い方
 
 `current_index` をINT表示ノードに接続すると、実行中に選択された項目の位置を確認できます。`queue_all` で残りの項目を追加する際に `start_at` ウィジェットが先に進んでも、この出力は各実行で選択された位置を返します。
+
+バッチをキャンセルして再開するには、待機中のキューをクリアし、`start_at` に希望する0始まりのインデックスを設定して、`queue_all` を有効にして再実行します。キューのクリアにより追加済み項目の追跡状態がリセットされ、追加処理も停止します。選択した `start_at` は変更されず、ブラウザの再読み込みは不要です。実行中のジョブだけを中断しても待機中のジョブは残るため、バッチを置き換える場合は待機中のキューもクリアしてください。
 
 動画バッチ:
 1) FolderBatch Video Queue -> video_path

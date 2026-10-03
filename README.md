@@ -30,6 +30,7 @@ Outputs
 - file_name (STRING): Selected video base name without extension.
 - video_count (INT): Total matching files detected before applying `video_limit`.
 - progress (FLOAT): Completion ratio from 0.0 to 1.0.
+- current_index (INT): 0-based index of the selected item in queue order, matching the clamped `start_at`; `-1` when the queue is empty.
 
 ### FolderBatch Load Video Frames
 Load a video and output frames as IMAGE batch, and also output the original video object.
@@ -65,6 +66,7 @@ Outputs
 - text_count (INT): Total matching files or lines detected before applying `text_limit`.
 - line_index (INT): Original 0-based line index, or `-1` in file mode.
 - progress (FLOAT): Completion ratio from 0.0 to 1.0.
+- current_index (INT): 0-based index of the selected item in queue order, matching the clamped `start_at`; `-1` when the queue is empty. In text line mode, this is the queue position, independent of `line_index`.
 
 ### FolderBatch Load Text
 Load a text file and output its content.
@@ -98,6 +100,7 @@ Outputs
 - file_name (STRING): Selected audio base name without extension.
 - audio_count (INT): Total matching files detected before applying `audio_limit`.
 - progress (FLOAT): Completion ratio from 0.0 to 1.0.
+- current_index (INT): 0-based index of the selected item in queue order, matching the clamped `start_at`; `-1` when the queue is empty.
 
 ### FolderBatch Load Audio
 Load an audio file and output it as AUDIO plus durations.
@@ -129,6 +132,7 @@ Outputs
 - file_name (STRING): Selected image base name without extension.
 - image_count (INT): Total matching files detected before applying `image_limit`.
 - progress (FLOAT): Completion ratio from 0.0 to 1.0.
+- current_index (INT): 0-based index of the selected item in queue order, matching the clamped `start_at`; `-1` when the queue is empty.
 
 ### FolderBatch Load Image
 Load an image file and output it as IMAGE and MASK.
@@ -169,8 +173,11 @@ Outputs
 - audio_path (STRING): Selected audio path or empty string.
 - item_count (INT): Total synchronized items detected before applying `item_limit`.
 - progress (FLOAT): Completion ratio from 0.0 to 1.0.
+- current_index (INT): 0-based index of the selected item in queue order, matching the clamped `start_at`; `-1` when the queue is empty. In text line mode, this is the queue position, independent of `line_index`.
 
 ## Typical Usage
+
+Connect `current_index` to an INT display node to see the selected item's position during execution. This also works with `queue_all`, where the `start_at` widget may advance ahead as remaining items are submitted.
 
 Video batch:
 1) FolderBatch Video Queue -> video_path
@@ -227,6 +234,7 @@ ComfyUIでフォルダ内のファイルを1つずつキューに流し込むた
 - file_name (STRING): 選択された動画の拡張子なしファイル名
 - video_count (INT): `video_limit` 適用前に検出したファイル総数
 - progress (FLOAT): 0.0〜1.0の進捗率
+- current_index (INT): キュー順で選択された項目の0始まりインデックス。範囲内に補正された `start_at` と同じ値で、キューが空なら `-1`。
 
 ### FolderBatch Load Video Frames
 動画を読み込み、フレームをIMAGEバッチで出力し、元動画もVIDEOとして出力します。
@@ -262,6 +270,7 @@ ComfyUIでフォルダ内のファイルを1つずつキューに流し込むた
 - text_count (INT): `text_limit` 適用前に検出したファイルまたは行の総数
 - line_index (INT): 元の0始まり行番号。fileモードでは `-1`
 - progress (FLOAT): 0.0〜1.0の進捗率
+- current_index (INT): キュー順で選択された項目の0始まりインデックス。範囲内に補正された `start_at` と同じ値で、キューが空なら `-1`。テキストの行単位モードでは `line_index` とは別のキュー位置です。
 
 ### FolderBatch Load Text
 テキストファイルを読み込み、内容をSTRINGで出力します。
@@ -295,6 +304,7 @@ ComfyUIでフォルダ内のファイルを1つずつキューに流し込むた
 - file_name (STRING): 選択された音声の拡張子なしファイル名
 - audio_count (INT): `audio_limit` 適用前に検出したファイル総数
 - progress (FLOAT): 0.0〜1.0の進捗率
+- current_index (INT): キュー順で選択された項目の0始まりインデックス。範囲内に補正された `start_at` と同じ値で、キューが空なら `-1`。
 
 ### FolderBatch Load Audio
 音声ファイルを読み込み、AUDIOと長さを出力します。
@@ -326,6 +336,7 @@ ComfyUIでフォルダ内のファイルを1つずつキューに流し込むた
 - file_name (STRING): 選択された画像の拡張子なしファイル名
 - image_count (INT): `image_limit` 適用前に検出したファイル総数
 - progress (FLOAT): 0.0〜1.0の進捗率
+- current_index (INT): キュー順で選択された項目の0始まりインデックス。範囲内に補正された `start_at` と同じ値で、キューが空なら `-1`。
 
 ### FolderBatch Load Image
 画像ファイルを読み込み、IMAGEとMASKで出力します。
@@ -366,8 +377,11 @@ ComfyUIでフォルダ内のファイルを1つずつキューに流し込むた
 - audio_path (STRING): 対応音声のパス。なければ空文字
 - item_count (INT): `item_limit` 適用前に検出した同期項目の総数
 - progress (FLOAT): 0.0〜1.0の進捗率
+- current_index (INT): キュー順で選択された項目の0始まりインデックス。範囲内に補正された `start_at` と同じ値で、キューが空なら `-1`。テキストの行単位モードでは `line_index` とは別のキュー位置です。
 
 ## 典型的な使い方
+
+`current_index` をINT表示ノードに接続すると、実行中に選択された項目の位置を確認できます。`queue_all` で残りの項目を追加する際に `start_at` ウィジェットが先に進んでも、この出力は各実行で選択された位置を返します。
 
 動画バッチ:
 1) FolderBatch Video Queue -> video_path

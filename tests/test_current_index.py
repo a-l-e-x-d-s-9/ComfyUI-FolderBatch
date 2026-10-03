@@ -2,6 +2,7 @@
 
 import ast
 import glob
+import math
 import os
 from pathlib import Path
 import random
@@ -48,6 +49,40 @@ class CurrentIndexTests(unittest.TestCase):
         self.assertEqual(len(response["result"]), len(node.RETURN_TYPES))
         self.assertEqual(len(node.RETURN_NAMES), len(node.RETURN_TYPES))
         return dict(zip(node.RETURN_NAMES, response["result"]))
+
+    def test_queues_disable_output_cache_for_identical_inputs(self):
+        for kind, _, _, _ in CASES:
+            with self.subTest(kind=kind):
+                queue_type = namespace[f"FB_Folder{kind}Queue"]
+                # ComfyUI invokes the hook on the class with the node's inputs.
+                inputs = {
+                    name: definition[1]["default"]
+                    for name, definition in queue_type.INPUT_TYPES()["required"].items()
+                }
+                first = queue_type.IS_CHANGED(**inputs)
+                second = queue_type.IS_CHANGED(**inputs)
+                self.assertTrue(math.isnan(first))
+                self.assertTrue(math.isnan(second))
+                self.assertNotEqual(first, second)
+
+    def test_completed_batch_rescans_on_restart(self):
+        for kind, options, _, _ in CASES:
+            with self.subTest(kind=kind):
+                node = namespace[f"FB_Folder{kind}Queue"]()
+                for index in range(4):
+                    self.run_queue(node, kind, options, start_at=index, queue_all=True)
+                added_paths = [self.folder / f"0.{extension}" for extension in ("png", "mp4", "wav", "txt")]
+                for path in added_paths:
+                    path.write_text("new item\n", encoding="utf-8")
+                try:
+                    response = self.run_queue(node, kind, options, start_at=0, queue_all=True)
+                    outputs = self.outputs(node, response)
+                    self.assertEqual(outputs.get("file_name", outputs.get("base_name")), "0")
+                    self.assertEqual(outputs["current_index"], 0)
+                    self.assertEqual(response["ui"]["queue_count"], (5,))
+                finally:
+                    for path in added_paths:
+                        path.unlink()
 
     def test_index_tracks_each_execution_in_all_queue_modes(self):
         for kind, options, limit_name, previous_outputs in CASES:
